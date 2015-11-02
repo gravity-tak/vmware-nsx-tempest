@@ -1,0 +1,7 @@
+[run]
+branch = True
+source = vmware_nsx_tempest
+omit = vmware_nsx_tempest/openstack/*
+
+[report]
+ignore_errors = True
