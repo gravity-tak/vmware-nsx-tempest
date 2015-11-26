@@ -52,3 +52,8 @@ ChangeLog
 *~
 .*.swp
 .*sw?
+
+# local stuff for runtime environment
+_local/
+_results/
+
