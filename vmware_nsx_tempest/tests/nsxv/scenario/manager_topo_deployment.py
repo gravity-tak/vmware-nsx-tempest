@@ -195,7 +195,7 @@ class TopoDeployScenarioManager(manager.NetworkScenarioTest):
         LOG.debug(cr_msg_t,
                   name, image, flavor, str(create_kwargs))
         server = servers_client.create_server(
-            name, image, flavor, **create_kwargs)
+            name=name, imageRef=image, flavorRef=flavor, **create_kwargs)
         if wait_on_delete:
             self.addCleanup(
                 waiters.wait_for_server_termination,

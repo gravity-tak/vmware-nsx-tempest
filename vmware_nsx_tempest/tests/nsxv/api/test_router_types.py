@@ -21,7 +21,7 @@ from tempest_lib.common.utils import data_utils
 from tempest.api.network import base_routers as base
 from tempest import config
 from tempest import test
-from vmware_nsx_tempest.tests.nsxv.lib import nsxv_client
+from vmware_nsx_tempest.services import nsxv_client
 
 CONF = config.CONF
 ROUTER_SIZE = ('compact', 'large', 'xlarge', 'quadlarge')

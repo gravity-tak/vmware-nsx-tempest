@@ -65,7 +65,6 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
         cls.create_router_interface(cls.router['id'], cls.subnet['id'])
         pool_name = data_utils.rand_name('pool-')
         vip_name = data_utils.rand_name('vip-')
-        import pdb; pdb.set_trace()
         cls.pool = cls.create_pool(pool_name, "ROUND_ROBIN",
                                    "HTTP", cls.subnet)
         cls.vip = cls.create_vip(name=vip_name,

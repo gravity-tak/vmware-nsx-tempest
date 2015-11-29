@@ -1,20 +1,18 @@
-
 from oslo_config import cfg
-
 from tempest import config
 
 scenario_group = config.scenario_group
 
 ScenarioGroup = [
     cfg.FloatOpt('waitfor_disassoc',
-               default=15.0,
-               help="Waitfor seconds after disassociation."),
+                 default=15.0,
+                 help="Waitfor seconds after disassociation."),
     cfg.FloatOpt('waitfor_assoc',
-               default=5.0,
-               help="Waitfor seconds after association."),
+                 default=5.0,
+                 help="Waitfor seconds after association."),
     cfg.FloatOpt('waitfor_connectivity',
-               default=120.0,
-               help="Waitfor seconds to become connected."),
+                 default=120.0,
+                 help="Waitfor seconds to become connected."),
     cfg.ListOpt('outside_world_servers',
                 default=["8.8.8.8", "8.8.4.4"],
                 help="List of servers reside outside of openstack env."
@@ -27,7 +25,7 @@ ScenarioGroup = [
                      " required attributes are gateway, start, end"
                      " and cidr. Example value: gateway:10.1.1.253,"
                      " start:10.1.1.30,end:10.1.1.49,cidr=10.1.1.0/24"),
- ]
+]
 
 network_group = config.network_group
 
@@ -58,14 +56,14 @@ NSXvGroup = [
                default='vdnscope-1',
                help="NSX-v vdn scope id"),
     cfg.FloatOpt('waitfor_disassoc',
-               default=15.0,
-               help="Waitfor seconds after disassociation."),
+                 default=15.0,
+                 help="Waitfor seconds after disassociation."),
     cfg.FloatOpt('waitfor_assoc',
-               default=5.0,
-               help="Waitfor seconds after association."),
+                 default=5.0,
+                 help="Waitfor seconds after association."),
     cfg.FloatOpt('waitfor_connectivity',
-               default=120.0,
-               help="Waitfor seconds to become connected."),
+                 default=120.0,
+                 help="Waitfor seconds to become connected."),
     cfg.DictOpt('flat_alloc_pool_dict',
                 default={},
                 help=" Define flat network ip range."

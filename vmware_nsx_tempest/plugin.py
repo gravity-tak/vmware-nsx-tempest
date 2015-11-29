@@ -21,12 +21,13 @@ from tempest.test_discover import plugins
 
 from vmware_nsx_tempest import config as config_nsx
 
+
 class VMwareNsxTempestPlugin(plugins.TempestPlugin):
 
     """Our addon configuration is defined at vmware_nsx_tempest/config.py
 
        1. register_opts() to register group/opts to Tempest
-       2. get_opt_lists() to pass config to Tempest 
+       2. get_opt_lists() to pass config to Tempest
 
        The official plugin is defined at
        http://docs.openstack.org/developer/tempest/plugin.html

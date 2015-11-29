@@ -71,22 +71,22 @@ class BaseAdminNetworkTest(base.BaseAdminNetworkTest):
     def update_network(cls, network_id, client=None, **kwargs):
         net_client = client if client else cls.admin_networks_client
         return net_client.update_network(network_id, **kwargs)
- 
+
     @classmethod
     def delete_network(cls, network_id, client=None):
         net_client = client if client else cls.admin_networks_client
         return net_client.delete_network(network_id)
- 
+
     @classmethod
     def show_network(cls, network_id, client=None, **kwargs):
         net_client = client if client else cls.admin_networks_client
         return net_client.show_network(network_id, **kwargs)
- 
+
     @classmethod
     def list_networks(cls, client=None, **kwargs):
         net_client = client if client else cls.admin_networks_client
         return net_client.list_networks(**kwargs)
- 
+
     @classmethod
     def create_subnet(cls, network, client=None,
                       gateway='', cidr=None, mask_bits=None,
@@ -104,22 +104,22 @@ class BaseAdminNetworkTest(base.BaseAdminNetworkTest):
     def update_subnet(cls, subnet_id, client=None, **kwargs):
         net_client = client if client else cls.admin_subnets_client
         return net_client.update_subnet(subnet_id, **kwargs)
- 
+
     @classmethod
     def delete_subnet(cls, subnet_id, client=None):
         net_client = client if client else cls.admin_subnets_client
         return net_client.delete_subnet(subnet_id)
- 
+
     @classmethod
     def show_subnet(cls, subnet_id, client=None, **kwargs):
         net_client = client if client else cls.admin_subnets_client
         return net_client.show_subnet(subnet_id, **kwargs)
- 
+
     @classmethod
     def list_subnets(cls, client=None, **kwargs):
         net_client = client if client else cls.admin_subnets_client
         return net_client.list_subnets(**kwargs)
- 
+
     # add other create methods, i.e. security-group, port, floatingip
     # if needed.
 
