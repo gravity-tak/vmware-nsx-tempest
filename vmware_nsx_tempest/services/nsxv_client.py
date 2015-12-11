@@ -13,14 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
-import json
 import base64
-import requests
+import json
 
+import requests
 from oslo_log import log as logging
 
-import vmware_nsx_tempest.tests.nsxv.utils as utils
+import vmware_nsx_tempest.services.utils as utils
 
 LOG = logging.getLogger(__name__)
 

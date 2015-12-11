@@ -77,3 +77,20 @@ NSXvGroup = [
                default=888,
                help="The default vlan_id for admin vlan."),
 ]
+
+
+l2gw_group = cfg.OptGroup(name='l2gw',
+                          title="l2-gateway Configuration Options")
+
+L2gwGroup = [
+    cfg.StrOpt('device_1vlan',
+                default={},
+                help=" Define single VLAN device."
+                     " required attribute is interface_names."
+                     " name=l2gw-falcon-1,interface_names=dvportgroup-14425|1151"),
+    cfg.StrOpt('device_trunkvlan',
+                default={},
+                help=" Define trunk VLAN device."
+                     " required attribute is interface_names."
+                     " nname=l2gw-falcon-x,interface_names=dvportgroup-14429|3880#3381#3382#3383#3384#3385"),
+]
