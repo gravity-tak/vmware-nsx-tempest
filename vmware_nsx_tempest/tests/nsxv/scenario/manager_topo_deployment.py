@@ -51,6 +51,7 @@ IPTYPE_FLOATING = 'floating-ip'
 IPTYPE_FIXED = 'fixed-ip'
 IPTYPE_OUTSIDE_SERVER = 'outside-server'
 
+
 class TopoDeployScenarioManager(manager.NetworkScenarioTest):
     """Purposes for TopoDeployScenarionManager:
 
@@ -158,7 +159,7 @@ class TopoDeployScenarioManager(manager.NetworkScenarioTest):
         create_kwargs = {
             'networks': network_ifs,
             'security_groups': security_groups,
-            }
+        }
         LOG.debug("TopoDeploy Create server name=%s, create_kwargs=%s",
                   name, str(create_kwargs))
         server = self.create_server(
@@ -248,7 +249,7 @@ class TopoDeployScenarioManager(manager.NetworkScenarioTest):
             The test class can define class variable tenant_router_attrs
             to create different type of routers.
         """
-        # namestart = namestart if namestart else 'topo-deploy-tenant' 
+        # namestart = namestart if namestart else 'topo-deploy-tenant'
         name = namestart or data_utils.rand_name('topo-deploy-tenant')
         client = client or self.network_client
         # _create_router() editing distributed and router_type
@@ -414,8 +415,8 @@ class TopoDeployScenarioManager(manager.NetworkScenarioTest):
                                        msg=None, ping_timeout=30):
         ip_address = floating_ip.floating_ip_address
         floatingip_status = 'ACTIVE' if should_connect else 'DOWN'
-        is_pingable = self.ping_ip_address(
-            ip_address, ping_timeout=ping_timeout)
+        is_pingable = self.ping_ip_address(ip_address,
+                                           ping_timeout=ping_timeout)
         msg = msg if msg else (
             "Timeout out waiting for %s to become reachable" % ip_address)
         if should_connect:
@@ -458,7 +459,7 @@ def check_host_not_reachable(host, dest_list, iptype_list,
                              time_out=10, repeat_cnt=12,
                              x_contd=2):
     not_connected = 0
-    for x in range(0,12):
+    for x in range(0, 12):
         not_reachable = check_host_is_reachable(
             host, dest_list, iptype_list, time_out=time_out)
         if not_reachable:
@@ -473,12 +474,13 @@ def check_host_not_reachable(host, dest_list, iptype_list,
 # check_hosts_connectivity
 def check_host_is_reachable(host, dest_list, iptype_list, time_out=120):
     rm_sshkey(host['ipaddr'])
-    ssh_client = get_remote_client_by_password(
-        host['ipaddr'], host['username'], host['password'])
+    ssh_client = get_remote_client_by_password(host['ipaddr'],
+                                               host['username'],
+                                               host['password'])
     n_not_reachable = 0
     for dest in dest_list:
         for iptype in iptype_list:
-            if  not dest_has_iptype(dest, iptype):
+            if not dest_has_iptype(dest, iptype):
                 dest['reachable'] = None
                 continue
             dest['reachable'] = is_reachable(
@@ -495,16 +497,17 @@ def check_host_is_reachable(host, dest_list, iptype_list, time_out=120):
 
 def dest_has_iptype(dest, iptype):
     if ('helper' in dest and
-        re.search(iptype, dest['helper'], re.I)):
+            re.search(iptype, dest['helper'], re.I)):
         return True
     return False
- 
+
 
 def check_hosts_connectivity(host, dest_list, ignore_helper=None,
                              time_out=120):
     rm_sshkey(host['ipaddr'])
-    ssh_client = get_remote_client_by_password(
-        host['ipaddr'], host['username'], host['password'])
+    ssh_client = get_remote_client_by_password(host['ipaddr'],
+                                               host['username'],
+                                               host['password'])
     n_not_reachable = 0
     for dest in dest_list:
         # caller can say to ignore dest ipaddr
@@ -527,13 +530,12 @@ def check_hosts_connectivity(host, dest_list, ignore_helper=None,
 
 def rm_sshkey(ip_addr):
     # ssh-keygen -f "/home/stack/.ssh/known_hosts" -R 10.34.57.3
-    kh_file = os.path.join(
-        os.environ.get('HOME', '/home/stack'),
-        '.ssh/known_hosts')
+    kh_file = os.path.join(os.environ.get('HOME', '/home/stack'),
+                           '.ssh/known_hosts')
     cmd = ['ssh-keygen', '-f', kh_file, '-R', ip_addr]
 
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
     proc.communicate()
     return proc.returncode
 
@@ -597,7 +599,6 @@ def get_subnet_create_options(network_id, ip_version=4,
                               gateway='', cidr=None, mask_bits=None,
                               num_subnet=1, gateway_offset=1, cidr_offset=0,
                               **kwargs):
-
     """When cidr_offset>0 it request only one subnet-options:
 
         subnet = get_subnet_create_options('abcdefg', 4, num_subnet=4)[3]
@@ -623,12 +624,11 @@ def get_subnet_create_options(network_id, ip_version=4,
         else:
             gateway_ip = gateway
         try:
-            subnet_body = dict(
-                network_id=network_id,
-                cidr=str(subnet_cidr),
-                ip_version=ip_version,
-                gateway_ip=gateway_ip,
-                **kwargs)
+            subnet_body = dict(network_id=network_id,
+                               cidr=str(subnet_cidr),
+                               ip_version=ip_version,
+                               gateway_ip=gateway_ip,
+                               **kwargs)
             if num_subnet <= 1:
                 return subnet_body
             subnet_list.append(subnet_body)
@@ -657,6 +657,7 @@ def delete_all_servers(tenant_servers_client):
     for s in tenant_servers_client.list_servers()['servers']:
         tenant_servers_client.delete_server(s['id'])
     waitfor_servers_terminated(tenant_servers_client)
+
 
 def waitfor_servers_terminated(tenant_servers_client, pause=2.0):
     while (True):
