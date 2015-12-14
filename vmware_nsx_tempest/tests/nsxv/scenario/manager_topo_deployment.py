@@ -123,10 +123,11 @@ class TopoDeployScenarioManager(manager.NetworkScenarioTest):
 
     # bypass pareant _create_router() to use the net_resources module.
     # Scenario: routers belong to admin, subnets belon to tenent
-    def _create_router(self, client=None, tenant_id=None,
+    def _create_router(self, mgr_client=None, tenant_id=None,
                        namestart='topo-deploy', **kwargs):
-        if not client:
-            client = self.network_client
+        client = (mgr_client.network_client
+                  if mgr_client else self.network_client)
+
         if not tenant_id:
             tenant_id = client.tenant_id
         distributed = kwargs.pop('distributed', None)
@@ -270,23 +271,25 @@ class TopoDeployScenarioManager(manager.NetworkScenarioTest):
         return net_network, net_subnet, net_router
 
     # TODO: remove neutron_client or change to manager object
-    def create_network_subnet(self, neutron_client, tenant_id=None,
-                              name=None, cidr_offset=0):
-        tenant_id = tenant_id or _g_tenant_id(neutron_client)
+    def create_network_subnet(self, networks_client, subnets_client,
+                              tenant_id=None, name=None, cidr_offset=0):
+        tenant_id = tenant_id or _g_tenant_id(networks_client)
         name = name or data_utils.rand_name('topo-deploy-network')
         net_network = self.create_network(
-            client=self.networks_client, tenant_id=tenant_id, name=name)
+            client=networks_client, tenant_id=tenant_id, name=name)
         net_subnet = self.create_subnet(
-            client=self.subnets_client, network=net_network,
+            client=subnets_client, network=net_network,
             cidr_offset=cidr_offset, name=net_network['name'])
         return net_network, net_subnet
 
     # cloned from _create_network@manager.py. Allow name parameter
-    def create_network(self, client=None, tenant_id=None, name=None):
+    def create_network(self, client=None, tenant_id=None, name=None,
+                       **kwargs):
         client = client or self.networks_client
         tenant_id = tenant_id or _g_tenant_id(client)
         name = name or data_utils.rand_name('topo-deploy-network')
-        result = client.create_network(name=name, tenant_id=tenant_id)
+        result = client.create_network(name=name, tenant_id=tenant_id,
+                                       **kwargs)
         net_network = net_resources.DeletableNetwork(
             client=client, **result['network'])
         self.assertEqual(net_network.name, name)
@@ -317,7 +320,7 @@ class TopoDeployScenarioManager(manager.NetworkScenarioTest):
 
     def create_floatingip_for_server(self, server, external_network_id=None,
                                      port_id=None, client=None):
-        client = client if client else self.network_client
+        client = client if client else self.floating_ips_client
         net_floatingip = self.create_floating_ip(
             server,
             external_network_id=external_network_id,

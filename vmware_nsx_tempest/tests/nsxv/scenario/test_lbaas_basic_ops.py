@@ -22,7 +22,6 @@ from tempest.common import commands
 from tempest import config
 from tempest import exceptions
 from tempest.scenario import manager
-from tempest.services.network import resources as net_resources
 from tempest import test
 
 config = config.CONF
@@ -80,7 +79,7 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         fallback in absence of tenant networking.
         """
         self.network, self.subnet, self.router = \
-                self.create_networks(router_type='exclusive')
+            self.create_networks(router_type='exclusive')
         self.check_networks()
 
     def check_networks(self):

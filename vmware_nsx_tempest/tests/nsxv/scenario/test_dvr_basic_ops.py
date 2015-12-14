@@ -28,7 +28,7 @@ from tempest.services.network import resources as net_resources
 from tempest import test
 
 CONF = config.CONF
-FIP_OPS_TIMEOUT=10
+FIP_OPS_TIMEOUT = 10
 LOG = logging.getLogger(__name__)
 
 Floating_IP_tuple = collections.namedtuple('Floating_IP_tuple',

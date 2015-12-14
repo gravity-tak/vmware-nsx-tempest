@@ -307,61 +307,13 @@ class TestMultiTenantsNetwork(dmgr.TopoDeployScenarioManager):
         # Do the reachable first, then check other VM's fixed-ip
         # is not reachable - again tenants should not have overlay IPs.
         not_reachable = dmgr.check_host_not_reachable(
-                self.green['node1'], self.red['node2']['dest'],
-                [dmgr.IPTYPE_FIXED], 10, 20, 2)
+            self.green['node1'], self.red['node2']['dest'],
+            [dmgr.IPTYPE_FIXED], 10, 20, 2)
         self.assertFalse(
             not_reachable,
             ("t1:VM-A=%s SHOULD-NOT-REACH t2:VM-B=[fixed-ip %s]" %
              (str(self.green['node1']), str(self.red['node2']))))
         self.remove_tenant_network()
-
-    def _test_tenant_network(self):
-        username, password = self.get_image_userpass()
-        # default_sg_id = T.find_default_security_group_id(self)
-        # add ssh/icmp rules to default_sg_id
-        self.security_group = self._create_security_group(
-            client=self.network_client, namestart=self.namestart)
-        self.network, self.subnet, self.router = self.setup_tenant_network(
-            self.public_network_id, namestart='deploy-tenant')
-        self.check_networks(self.network, self.subnet, self.router)
-        name1 = self.network['name'] + "-A"
-        name2 = self.network['name'] + "-B"
-        security_groups = [{'name': self.security_group['name']}]
-        self.serv1 = self.create_server_on_network(
-            self.network, security_groups,
-            image=self.get_server_image(),
-            flavor=self.get_server_flavor(),
-            name=name1, wait_on_boot=False)
-        self.serv2 = self.create_server_on_network(
-            self.network, security_groups,
-            image=self.get_server_image(),
-            flavor=self.get_server_flavor(),
-            name=name2)
-        self.fip2 = self.create_floatingip_for_server(self.serv2)
-        self.fip1 = self.create_floatingip_for_server(self.serv1)
-        node1 = dmgr.make_node_info(self.fip1, username, password, True)
-        node2 = dmgr.make_node_info(self.fip2, username, password, True)
-        is_reachable = dmgr.check_host_is_reachable(
-            node1, node2['dest'],
-            [dmgr.IPTYPE_FIXED, dmgr.IPTYPE_OUTSIDE_SERVER]) 
-        self.assertTrue(
-            is_reachable,
-            "VM-A=%s CANNOT-REACH VM-B=%s" % (str(node1), str(node2)))
-        is_reachable = dmgr.check_host_is_reachable(
-            node2, node1['dest'],
-            [dmgr.IPTYPE_FIXED, dmgr.IPTYPE_OUTSIDE_SERVER]) 
-        self.assertTrue(
-            is_reachable,
-            "VM-B=%s CANNOT-REACH VM-A=%s" % (str(node2), str(node1)))
-        self.disassociate_floatingip(self.fip1)
-        self.disassociate_floatingip(self.fip2)
-        time.sleep(dmgr.WAITTIME_AFTER_DISASSOC_FLOATINGIP)
-        dmgr.LOG.info("deployment delete-server - tenant network.")
-        self.servers_client.delete_server(self.serv2['id'])
-        self.servers_client.delete_server(self.serv1['id'])
-        self.router.unset_gateway()
-        self.router.delete()
-        dmgr.LOG.info('deploy tc:test_tenant_network test-completed.')
 
 
 class TestProviderRouterTenantNetwork(dmgr.TopoDeployScenarioManager):
@@ -407,18 +359,22 @@ class TestProviderRouterTenantNetwork(dmgr.TopoDeployScenarioManager):
         self.p_router.unset_gateway()
         self.p_router.delete()
 
-    def create_tenant_network_env(self, to_router,
-                                  tenant_network_client,
-                                  t_id, servers_client,
-                                  cidr_offset=0):
-        namestart="deploy-%s-tenant" % t_id
-        name=data_utils.rand_name(namestart)
+    def create_tenant_network_env(self, to_router, t_id, client_mgr=None,
+                                  cidr_offset=0, **kwargs):
+        namestart = "deploy-%s-tenant" % t_id
+        name = data_utils.rand_name(namestart)
+        networks_client = (client_mgr.networks_client
+                           if client_mgr else self.networks_client)
+        subnets_client = (client_mgr.subnets_client
+                          if client_mgr else self.subnets_client)
+        servers_client = (client_mgr.servers_client
+                          if client_mgr else self.servers_client)
         t_network, t_subnet = self.create_network_subnet(
-            tenant_network_client, name=name,
-            cidr_offset=cidr_offset)
+            networks_client, subnets_client, name=name,
+            cidr_offset=cidr_offset,)
         to_router.add_subnet(t_subnet)
         t_security_group = self._create_security_group(
-            client=tenant_network_client, namestart=namestart)
+            client=self.network_client, namestart=namestart)
         security_groups = [{'name': t_security_group['name']}]
         t_serv = self.create_server_on_network(
             t_network, security_groups,
@@ -427,7 +383,7 @@ class TestProviderRouterTenantNetwork(dmgr.TopoDeployScenarioManager):
             flavor=self.get_server_flavor(),
             servers_client=servers_client)
         t_fip = self.create_floatingip_for_server(
-            t_serv, client=tenant_network_client)
+            t_serv, client=self.floating_ips_client)
 
         return dict(network=t_network, subnet=t_subnet,
                     router=to_router,
@@ -445,11 +401,9 @@ class TestProviderRouterTenantNetwork(dmgr.TopoDeployScenarioManager):
             router_type=self.tenant_router_attrs.get('router_type'))
         self.p_router.set_gateway(self.public_network_id)
         self.yellow = self.create_tenant_network_env(
-            self.p_router, self.network_client, 'yellow',
-            self.servers_client, 0)
+            self.p_router, 'yellow', None, 0)
         self.blue = self.create_tenant_network_env(
-            self.p_router, self.alt_manager.network_client, 'blue',
-            self.alt_manager.servers_client, 2)
+            self.p_router, 'blue', self.alt_manager, 2)
         username, password = self.get_image_userpass()
         yellow = dmgr.make_node_info(self.yellow['fip'], username, password)
         blue = dmgr.make_node_info(self.blue['fip'], username, password)
@@ -459,104 +413,11 @@ class TestProviderRouterTenantNetwork(dmgr.TopoDeployScenarioManager):
             is_reachable,
             "VM-yello=%s CANNOT-REACH VM-blue=%s" % (str(yellow), str(blue)))
         is_reachable = dmgr.check_host_is_reachable(
-            blue, yello['dest'], [dmgr.IPTYPE_FLOATING])
+            blue, yellow['dest'], [dmgr.IPTYPE_FLOATING])
         self.assertTrue(
             is_reachable,
             "VM-blue=%s CANNOT-REACH VM-yellow=%s" % (str(blue), str(yellow)))
         self.remove_tenant_network()
- 
-
-    def _test_provider_router_tenant_network(self):
-        # provider router owned by admin_client
-        self.p_router = self._create_router(
-            client=self.admin_client, namestart="deploy-provider-router",
-            distributed=self.tenant_router_attrs.get('distributed'),
-            router_type=self.tenant_router_attrs.get('router_type'))
-        self.p_router.set_gateway(self.public_network_id)
-
-        # private primary networks, t1-network
-        self.t1_network = self._create_network(
-            client=self.network_client,
-            tenant_id=self.tenant_id, namestart="deploy-t1-network")
-        self.t1_subnet = self.create_subnet(
-            client=self.network_client,
-            network=self.t1_network, cidr_offset=1,
-            name=self.t1_network['name'])
-        self.p_router.add_subnet(self.t1_subnet)
-
-        # private alt_manager networks, t2-network
-        self.t2_network = self._create_network(
-            client=self.alt_manager.network_client,
-            tenant_id=self.alt_tenant_id, namestart="deploy-t2-network")
-        self.t2_subnet = self.create_subnet(
-            client=self.alt_manager.network_client,
-            network=self.t2_network, cidr_offset=3,
-            name=self.t2_network['name'])
-        self.p_router.add_subnet(self.t2_subnet)
-
-        self.t1_security_group = self._create_security_group(
-            client=self.network_client,
-            namestart='deploy-t1-network')
-        t1_security_groups = [{'name': self.t1_security_group['name']}]
-
-        self.t2_security_group = self._create_security_group(
-            client=self.alt_manager.network_client,
-            namestart='deploy-t2-network')
-        t2_security_groups = [{'name': self.t2_security_group['name']}]
-
-        dmgr.LOG.info(
-            "Create provider router and 2 private tenant networks")
-
-        self.t1_serv = self.create_server_on_network(
-            self.t1_network, t1_security_groups,
-            name=self.t1_network['name'], wait_on_boot=False,
-            image=self.get_server_image(),
-            flavor=self.get_server_flavor(),
-            servers_client=self.servers_client)
-
-        self.t2_serv = self.create_server_on_network(
-            self.t2_network, t2_security_groups,
-            name=self.t2_network['name'],
-            image=self.get_server_image(),
-            flavor=self.get_server_flavor(),
-            servers_client=self.alt_manager.servers_client)
-
-        dmgr.LOG.info(
-            "create floatingip and assign to private t1-networks")
-        self.t1_fip = self.create_floatingip_for_server(
-            self.t1_serv, client=self.network_client)
-        dmgr.LOG.info(
-            "create floatingip and assign to private t2-networks")
-        self.t2_fip = self.create_floatingip_for_server(
-            self.t2_serv, client=self.alt_manager.network_client)
-        # check data path
-        dmgr.LOG.info("checking connectivity between tenant-1 and tenant-2")
-        username, password = self.get_image_userpass()
-        node1 = dmgr.make_node_info(self.t1_fip, username, password, True)
-        node2 = dmgr.make_node_info(self.t2_fip, username, password, True)
-        is_reachable = dmgr.check_host_is_reachable(
-            node1, node2['dest'],
-            [dmgr.IPTYPE_FIXED, dmgr.IPTYPE_OUTSIDE_SERVER]) 
-        self.assertTrue(
-            is_reachable,
-            "VM-t1=%s CANNOT-REACH VM-t2=%s" % (str(node1), str(node2)))
-        is_reachable = dmgr.check_host_is_reachable(
-            node2, node1['dest'],
-            [dmgr.IPTYPE_FIXED, dmgr.IPTYPE_OUTSIDE_SERVER]) 
-        self.assertTrue(
-            is_reachable,
-            "VM-t2=%s CANNOT-REACH VM-t1=%s" % (str(node1), str(node2)))
-        self.disassociate_floatingip(self.t1_fip)
-        self.disassociate_floatingip(self.t2_fip)
-        time.sleep(dmgr.WAITTIME_AFTER_DISASSOC_FLOATINGIP)
-        dmgr.LOG.info("deployment delete-server - provider router tenant.")
-        self.servers_client.delete_server(self.t1_serv['id'])
-        self.alt_manager.servers_client.delete_server(self.t2_serv['id'])
-        self.p_router.unset_gateway()
-        self.p_router.delete_subnet(self.t1_subnet)
-        self.p_router.delete_subnet(self.t2_subnet)
-        self.p_router.delete()
-        dmgr.LOG.info('deploy tc:test_provider_tenant_network test-completed.')
 
 
 # exclusive router
@@ -681,3 +542,19 @@ class TestProviderDistributedRouterTenantNetwork(
             if not test.is_extension_enabled(ext, 'network'):
                 msg = "%s extension not enabled." % ext
                 raise cls.skipException(msg)
+
+
+def _g_service_client(req_mgr, client_name):
+    s_client = getattr(req_mgr, client_name, None)
+    if s_client:
+        return s_client
+    return req_mgr.network_client
+
+
+# self vs req: there are possible 3 client managers (admin, pri, 2nd)
+# in each class, but the default is the primary, other clients need aslo
+# to create resources, so you should call this to get proper client.
+def _g_neutron_service_client(self_mgr, req_mgr, client_name):
+    if req_mgr:
+        return _g_service_client(req_mgr, client_name)
+    return _g_service_client(self_mgr, client_name)
