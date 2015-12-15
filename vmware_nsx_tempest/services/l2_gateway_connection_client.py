@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.services.network.json import base
+from vmware_nsx_tempest.services import network_client_base as base
 
 default_params = {
     'disable_ssl_certificate_validation': True,
