@@ -21,7 +21,7 @@ from tempest.api.network import base
 from tempest import test
 from tempest import config
 
-from vmware_nsx_tempest.services import load_balancer_v1_client
+from vmware_nsx_tempest.services import load_balancer_v1_client as LBV1C
 
 CONF = config.CONF
 
@@ -59,8 +59,9 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
         super(LoadBalancerTestJSON, cls).resource_setup()
         default_params = cls.manager.default_params.copy()
         default_params.update(cls.manager.default_params_with_timeout_values)
-        cls.lbv1_client = load_balancer_v1_client(cls.manager.auth_provider,
-                                                  **default_params)
+        cls.lbv1_client = LBV1C.LoadBalancerV1Client(
+            cls.manager.auth_provider,
+            **default_params)
         cls.network = cls.create_network()
         cls.name = cls.network['name']
         cls.subnet = cls.create_subnet(cls.network)
@@ -191,11 +192,11 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
         update_data = {"session_persistence": {
             "type": persistence_type}}
         body = self.lbv1_client.update_vip(vip_id,
-                                      name=new_name,
-                                      description=new_description,
-                                      connection_limit=10,
-                                      admin_state_up=False,
-                                      **update_data)
+                                           name=new_name,
+                                           description=new_description,
+                                           connection_limit=10,
+                                           admin_state_up=False,
+                                           **update_data)
         updated_vip = body['vip']
         self.assertEqual(new_name, updated_vip['name'])
         self.assertEqual(new_description, updated_vip['description'])
@@ -208,9 +209,9 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
         # Verification of pool update
         new_name = "New_pool"
         body = self.lbv1_client.update_pool(pool['id'],
-                                       name=new_name,
-                                       description="new_description",
-                                       lb_method='LEAST_CONNECTIONS')
+                                            name=new_name,
+                                            description="new_description",
+                                            lb_method='LEAST_CONNECTIONS')
         updated_pool = body['pool']
         self.assertEqual(new_name, updated_pool['name'])
         self.assertEqual('new_description', updated_pool['description'])
@@ -230,11 +231,11 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     @test.idempotent_id('432470dd-836b-4555-8388-af95a1c74d32')
     def test_show_pool(self):
         # Here we need to new pool without any dependence with vips
-        pool_name=data_utils.rand_name("pool-")
+        pool_name = data_utils.rand_name("pool-")
         body = self.lbv1_client.create_pool(name=pool_name,
-                                       lb_method='ROUND_ROBIN',
-                                       protocol='HTTP',
-                                       subnet_id=self.subnet['id'])
+                                            lb_method='ROUND_ROBIN',
+                                            protocol='HTTP',
+                                            subnet_id=self.subnet['id'])
         pool = body['pool']
         self.addCleanup(self.lbv1_client.delete_pool, pool['id'])
         # Verifies the details of a pool
@@ -282,12 +283,12 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     def test_create_update_delete_member(self):
         # Creates a member
         body = self.lbv1_client.create_member(address=self.member_address,
-                                         protocol_port=80,
-                                         pool_id=self.pool['id'])
+                                              protocol_port=80,
+                                              pool_id=self.pool['id'])
         member = body['member']
         # Verification of member update
         body = self.lbv1_client.update_member(member['id'],
-                                         admin_state_up=False)
+                                              admin_state_up=False)
         updated_member = body['member']
         self.assertFalse(updated_member['admin_state_up'])
         # Verification of member delete
@@ -322,9 +323,9 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     def test_create_update_delete_health_monitor(self):
         # Creates a health_monitor
         body = self.lbv1_client.create_health_monitor(delay=4,
-                                                 max_retries=3,
-                                                 type="TCP",
-                                                 timeout=1)
+                                                      max_retries=3,
+                                                      type="TCP",
+                                                      timeout=1)
         health_monitor = body['health_monitor']
         # Verification of health_monitor update
         body = (self.lbv1_client.update_health_monitor
@@ -339,9 +340,9 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     def test_create_health_monitor_http_type(self):
         hm_type = "HTTP"
         body = self.lbv1_client.create_health_monitor(delay=4,
-                                                 max_retries=3,
-                                                 type=hm_type,
-                                                 timeout=1)
+                                                      max_retries=3,
+                                                      type=hm_type,
+                                                      timeout=1)
         health_monitor = body['health_monitor']
         self.addCleanup(self.lbv1_client.delete_health_monitor,
                         health_monitor['id'])
@@ -350,9 +351,9 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     @test.idempotent_id('b1279c46-822a-4406-bb16-6a6ce7bf4e4e')
     def test_update_health_monitor_http_method(self):
         body = self.lbv1_client.create_health_monitor(delay=4,
-                                                 max_retries=3,
-                                                 type="HTTP",
-                                                 timeout=1)
+                                                      max_retries=3,
+                                                      type="HTTP",
+                                                      timeout=1)
         health_monitor = body['health_monitor']
         self.addCleanup(self.lbv1_client.delete_health_monitor,
                         health_monitor['id'])
@@ -428,7 +429,7 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     @test.idempotent_id('a2843ec6-80d8-4617-b985-8c8565daac8d')
     def test_update_admin_state_up_of_pool(self):
         self.lbv1_client.update_pool(self.pool['id'],
-                                admin_state_up=False)
+                                     admin_state_up=False)
         body = self.lbv1_client.show_pool(self.pool['id'])
         pool = body['pool']
         self.assertFalse(pool['admin_state_up'])
@@ -455,27 +456,28 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     @test.idempotent_id('4fa308fa-ac2b-4acf-87db-adfe2ee4739c')
     def test_update_pool_related_to_member(self):
         # Create new pool
-        body = self.lbv1_client.create_pool(name=data_utils.rand_name("pool-"),
-                                       lb_method='ROUND_ROBIN',
-                                       protocol='HTTP',
-                                       subnet_id=self.subnet['id'])
+        body = self.lbv1_client.create_pool(
+            name=data_utils.rand_name("pool-"),
+            lb_method='ROUND_ROBIN',
+            protocol='HTTP',
+            subnet_id=self.subnet['id'])
         new_pool = body['pool']
         self.addCleanup(self.lbv1_client.delete_pool, new_pool['id'])
         # Update member with new pool's id
         body = self.lbv1_client.update_member(self.member['id'],
-                                         pool_id=new_pool['id'])
+                                              pool_id=new_pool['id'])
         # Confirm with show that pool_id change
         body = self.lbv1_client.show_member(self.member['id'])
         member = body['member']
         self.assertEqual(member['pool_id'], new_pool['id'])
         # Update member with old pool id, this is needed for clean up
         body = self.lbv1_client.update_member(self.member['id'],
-                                         pool_id=self.pool['id'])
+                                              pool_id=self.pool['id'])
 
     @test.idempotent_id('0af2ff6b-a896-433d-8107-3c76262a9dfa')
     def test_update_member_weight(self):
         self.lbv1_client.update_member(self.member['id'],
-                                  weight=2)
+                                       weight=2)
         body = self.lbv1_client.show_member(self.member['id'])
         member = body['member']
         self.assertEqual(2, member['weight'])
