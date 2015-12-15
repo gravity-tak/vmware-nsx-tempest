@@ -20,18 +20,19 @@ from tempest.services.network.json import base
 
 # netowrk/json/base.py does not include thoese method in network_client
 class BaseNetworkClient(base.BaseNetworkClient):
-
-    def __init__(self, service, region,
+    def __init__(self, auth_provider, service, region,
                  endpoint_type=None, build_interval=None, build_timeout=None,
                  disable_ssl_certificate_validation=None, ca_certs=None,
                  trace_requests=None, **kwargs):
         dsca = disable_ssl_certificate_validation
-        super(base.BaseNetworkClient, self).__init__(service, region,
-                 endpoint_type=endpoint_type, build_interval=build_interval,
-                 build_timeout=build_timeout, 
-                 disable_ssl_certificate_validation=dsca,
-                 ca_certs=ca_certs,
-                 trace_requests=trace_requests)
+        super(base.BaseNetworkClient, self).__init__(
+            auth_provider, service, region,
+            endpoint_type=endpoint_type,
+            build_interval=build_interval,
+            build_timeout=build_timeout,
+            disable_ssl_certificate_validation=dsca,
+            ca_certs=ca_certs,
+            trace_requests=trace_requests)
 
     def wait_for_resource_deletion(self, resource_type, id, client=None):
         """Waits for a resource to be deleted."""
@@ -54,5 +55,3 @@ class BaseNetworkClient(base.BaseNetworkClient):
         except lib_exc.NotFound:
             return True
         return False
-
-
