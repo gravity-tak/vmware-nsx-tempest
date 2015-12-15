@@ -78,14 +78,14 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
         cls.create_router_interface(cls.router['id'], cls.subnet['id'])
         pool_name = data_utils.rand_name('pool-')
         vip_name = data_utils.rand_name('vip-')
-        cls.pool = cls.lbv1_client.create_pool(pool_name, "ROUND_ROBIN",
-                                               "HTTP", cls.subnet['id'])
-        cls.vip = cls.lbv1_client.create_vip(name=vip_name,
+        cls.pool = cls.lbv1_client.create_pool(
+            pool_name, "ROUND_ROBIN", "HTTP", cls.subnet['id'])['pool']
+        cls.vip = cls.lbv1_client.create_vip(cls.pool['id'],
+                                             name=vip_name,
                                              protocol="HTTP",
                                              protocol_port=80,
-                                             subnet=cls.subnet,
-                                             pool=cls.pool)
-        cls.member = cls.lbv1_client.create_member(80, cls.pool,
+                                             subnet_id=cls.subnet['id'])
+        cls.member = cls.lbv1_client.create_member(80, cls.pool['id'],
                                                    cls._ip_version)
         cls.member_address = ("10.0.9.47" if cls._ip_version == 4
                               else "2015::beef")
@@ -153,7 +153,7 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     def test_list_vips_with_filter(self):
         pool_name = data_utils.rand_name("pool-")
         vip_name = data_utils.rand_name('vip-')
-        body = self.lbv1_client.create_pool(name=pool_name,
+        body = self.lbv1_client.create_pool(pool_name,
                                             lb_method="ROUND_ROBIN",
                                             protocol="HTTPS",
                                             subnet_id=self.subnet['id'])
@@ -170,19 +170,20 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     @test.idempotent_id('73dfc119-b64b-4e56-90d2-df61d7181098')
     def test_create_update_delete_pool_vip(self):
         # Creates a vip
-        name = data_utils.rand_name('vip-')
+        pool_name=data_utils.rand_name("pool-")
+        vip_name = data_utils.rand_name('vip-')
         address = self.subnet['allocation_pools'][0]['end']
         body = self.lbv1_client.create_pool(
-            name=data_utils.rand_name("pool-"),
+            pool_name,
             lb_method='ROUND_ROBIN',
             protocol='HTTP',
             subnet_id=self.subnet['id'])
         pool = body['pool']
-        body = self.lbv1_client.create_vip(name=name,
+        body = self.lbv1_client.create_vip(pool['id'],
+                                           name=vip_name,
                                            protocol="HTTP",
                                            protocol_port=80,
                                            subnet_id=self.subnet['id'],
-                                           pool_id=pool['id'],
                                            address=address)
         vip = body['vip']
         vip_id = vip['id']
@@ -237,7 +238,7 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     def test_show_pool(self):
         # Here we need to new pool without any dependence with vips
         pool_name = data_utils.rand_name("pool-")
-        body = self.lbv1_client.create_pool(name=pool_name,
+        body = self.lbv1_client.create_pool(pool_name,
                                             lb_method='ROUND_ROBIN',
                                             protocol='HTTP',
                                             subnet_id=self.subnet['id'])
@@ -461,8 +462,9 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     @test.idempotent_id('4fa308fa-ac2b-4acf-87db-adfe2ee4739c')
     def test_update_pool_related_to_member(self):
         # Create new pool
+        pool_name=data_utils.rand_name("pool-")
         body = self.lbv1_client.create_pool(
-            name=data_utils.rand_name("pool-"),
+            pool_name,
             lb_method='ROUND_ROBIN',
             protocol='HTTP',
             subnet_id=self.subnet['id'])
