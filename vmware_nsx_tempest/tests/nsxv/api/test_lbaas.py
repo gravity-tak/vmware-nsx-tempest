@@ -57,15 +57,16 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     @classmethod
     def resource_setup(cls):
         super(LoadBalancerTestJSON, cls).resource_setup()
-        default_params = cls.manager.default_params.copy()
-        for p in default_params.keys():
-            if p in ['region', 'endpoint_type']:
-                default_params.pop(p)
+        _params = cls.manager.default_params_with_timeout_values.copy()
+        for p in _params.keys():
+            if p in ['service', 'region', 'endpoint_type']:
+                _params.pop(p)
         cls.lbv1_client = LBV1C.LoadBalancerV1Client(
             cls.manager.auth_provider,
+            cls.manager.networks_client.service,
             cls.manager.networks_client.region,
             cls.manager.networks_client.endpoint_type,
-            **default_params)
+            **_params)
         cls.network = cls.create_network()
         cls.name = cls.network['name']
         cls.subnet = cls.create_subnet(cls.network)
