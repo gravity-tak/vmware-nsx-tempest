@@ -60,7 +60,7 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
     def associate_health_monitor_with_pool(self, health_monitor_id, pool_id):
         """Create a mapping between a health monitor and a pool."""
         post_body = {'health_monitor': { 'id': health_monitor_id }}
-        req_uri = '/lb/pools/%s/health_monitor' % (pool_id)
+        req_uri = '/lb/pools/%s/%s' % (pool_id, HEALTHMONITOR_RID)
         return self.create_resource(req_uri, post_body)
 
     def create_health_monitor(self, **kwargs):
@@ -80,22 +80,22 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
 
     def disassociate_health_monitor_with_pool(self, health_monitor_id, pool_id):
         """Remove a mapping from a health monitor to a pool."""
-        req_uri = ('/lb/pools/%s/health_monitor/%s'
-                   % (pool_id, health_monitory_id))
+        req_uri = ('/lb/pools/%s/%s/%s'
+                   % (pool_id, HEALTHMONITOR_RID, health_monitor_id))
         return self.delete_resource(req_uri)
 
-    def list_health_monitor(self):
+    def list_health_monitors(self, **filters):
         """List health monitors that belong to a given tenant."""
-        return self._list_lb(HEALTHMONITOR_RID)
+        return self._list_lb(HEALTHMONITOR_RID, **filters)
 
     def show_health_monitor(self, health_monitor_id):
         """Show information of a given health monitor."""
         return self._show_lb(HEALTHMONITOR_RID, health_monitor_id)
 
     def update_health_monitor(self, health_monitor_id,
-                              show_then_update=True, **kwargs):
+                              show_then_update=False, **kwargs):
         """Update a given health monitor."""
-        body = (self.lb_health_monitor_show(health_monitor_id)
+        body = (self.show_health_monitor(health_monitor_id)['health_monitor']
                 if show_then_update else {})
         body.update(**kwargs)
         return self._update_lb(HEALTHMONITOR_RID,
@@ -109,7 +109,7 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
         create_kwargs = dict(
             protocol_port=protocol_port,
             pool_id=pool_id,
-            # address=("fd00:abcd" if ip_version == 6 else "10.0.9.46"),
+            address=("fd00:abcd" if ip_version == 6 else "10.0.9.46"),
         )
         create_kwargs.update(**kwargs)
         return self._create_lb(MEMBER_RID, **create_kwargs)
@@ -118,29 +118,29 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
         """Delete a given member."""
         return self._delete_lb(MEMBER_RID, member_id)
 
-    def list_member(self):
+    def list_members(self, **filters):
         """List members that belong to a given tenant."""
-        return self._list_lb(MEMBER_RID)
+        return self._list_lb(MEMBER_RID, **filters)
 
     def show_member(self, member_id):
         """Show information of a given member."""
         return self._show_lb(MEMBER_RID, member_id)
 
     def update_member(self, member_id,
-                      show_then_update=True, **kwargs):
+                      show_then_update=False, **kwargs):
         """Update a given member."""
-        body = (self.lb_member_show(member_id) if
-                show_then_update else {})
+        body = (self.show_member(member_id)['member']
+                if show_then_update else {})
         body.update(**kwargs)
         return self._update_lb(MEMBER_RID, member_id, **body)
 
-    def create_pool(self, pool_name, lb_method, protocol, subnet_id,
+    def create_pool(self, name, lb_method, protocol, subnet_id,
                     **kwargs):
         """Create a pool."""
         lb_method = lb_method or 'ROUND_ROBIN'
         protocol = protocol or 'HTTP'
         create_kwargs = dict(
-            name=pool_name, lb_method=lb_method,
+            name=name, lb_method=lb_method,
             protocol=protocol, subnet_id=subnet_id,
         )
         create_kwargs.update(kwargs)
@@ -150,16 +150,16 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
         """Delete a given pool."""
         return self._delete_lb(POOL_RID, pool_id)
 
-    def list_pool(self):
+    def list_pools(self, **filters):
         """List pools that belong to a given tenant."""
-        return self._list_lb(POOL_RID)
+        return self._list_lb(POOL_RID, **filters)
 
-    def list_lb_pool_stats(self, pool_id):
+    def list_lb_pool_stats(self, pool_id, **filters):
         """Retrieve stats for a given pool."""
         req_uri = '/lb/pools/%s/stats' % (pool_id)
-        return self.show_resource(req_uri)
+        return self.list_resources(req_uri, **filters)
 
-    def list_pool_on_agent(self):
+    def list_pool_on_agents(self, **filters):
         """List the pools on a loadbalancer agent."""
         pass
 
@@ -167,10 +167,10 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
         """Show information of a given pool."""
         return self._show_lb(POOL_RID, pool_id)
 
-    def update_pool(self, pool_id, show_then_update=True, **kwargs):
+    def update_pool(self, pool_id, show_then_update=False, **kwargs):
         """Update a given pool."""
-        body = (self.lb_pool_show(pool_id) if
-                show_then_update else {})
+        body = (self.show_pool(pool_id)['pool']
+                if show_then_update else {})
         body.update(**kwargs)
         return self._update_lb(POOL_RID, pool_id, **body)
 
@@ -194,18 +194,18 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
         """Delete a given vip."""
         return self._delete_lb(VIP_RID, vip_id)
 
-    def list_vip(self):
+    def list_vips(self, **filters):
         """List vips that belong to a given tenant."""
-        return self._list_lb(VIP_RID)
+        return self._list_lb(VIP_RID, **filters)
 
     def show_vip(self, vip_id):
         """Show information of a given vip."""
         return self._show_lb(VIP_RID, vip_id)
 
-    def update_vip(self, vip_id, show_then_update=True, **kwargs):
+    def update_vip(self, vip_id, show_then_update=False, **kwargs):
         """Update a given vip."""
-        body = (self.lb_vip_show(vip_id) if
-                show_then_update else {})
+        body = (self.show_vip(vip_id)['vip']
+                if show_then_update else {})
         body.update(**kwargs)
         return self._update_lb(VIP_RID, vip_id, **body)
 
@@ -228,11 +228,11 @@ def create_lbv1_client(auth_provider, catalog_type, region,
 
 
 def destroy_tenant_lb(lbv1_client):
-    for o in lbv1_client.list_member():
+    for o in lbv1_client.list_members():
         lbv1_client.delete_member(o['id'])
-    for o in lbv1_client.list_health_monitor():
+    for o in lbv1_client.list_health_monitors():
         lbv1_client.delete_health_monitor(o['id'])
-    for o in lbv1_client.list_vip():
+    for o in lbv1_client.list_vips():
         lbv1_client.delete_vip(o['id'])
-    for o in lbv1_client.list_pool():
+    for o in lbv1_client.list_pools():
         lbv1_client.delete_pool(o['id'])

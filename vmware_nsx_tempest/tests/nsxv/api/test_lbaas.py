@@ -81,16 +81,16 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
         cls.pool = cls.lbv1_client.create_pool(
             pool_name, "ROUND_ROBIN", "HTTP", cls.subnet['id'])['pool']
         cls.vip = cls.lbv1_client.create_vip(cls.pool['id'],
+                                             subnet_id=cls.subnet['id'],
                                              name=vip_name,
                                              protocol="HTTP",
-                                             protocol_port=80,
-                                             subnet_id=cls.subnet['id'])
-        cls.member = cls.lbv1_client.create_member(80, cls.pool['id'],
-                                                   cls._ip_version)
+                                             protocol_port=80)['vip']
+        cls.member = cls.lbv1_client.create_member(
+            80, cls.pool['id'], cls._ip_version)['member']
         cls.member_address = ("10.0.9.47" if cls._ip_version == 4
                               else "2015::beef")
         cls.health_monitor = cls.lbv1_client.create_health_monitor(
-            delay=4, max_retries=3, type="TCP", timeout=1)
+            delay=4, max_retries=3, type="TCP", timeout=1)['health_monitor']
 
     @classmethod
     def resource_cleanup(cls):
@@ -127,9 +127,9 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
         super(LoadBalancerTestJSON, cls).resource_cleanup()
 
     def _check_list_with_filter(self, obj_name, attr_exceptions, **kwargs):
-        create_obj = getattr(self.client, 'create_' + obj_name)
-        delete_obj = getattr(self.client, 'delete_' + obj_name)
-        list_objs = getattr(self.client, 'list_' + obj_name + 's')
+        create_obj = getattr(self.lbv1_client, 'create_' + obj_name)
+        delete_obj = getattr(self.lbv1_client, 'delete_' + obj_name)
+        list_objs = getattr(self.lbv1_client, 'list_' + obj_name + 's')
 
         body = create_obj(**kwargs)
         obj = body[obj_name]
@@ -158,7 +158,7 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
                                             protocol="HTTPS",
                                             subnet_id=self.subnet['id'])
         pool = body['pool']
-        self.addCleanup(self.client.delete_pool, pool['id'])
+        self.addCleanup(self.lbv1_client.delete_pool, pool['id'])
         attr_exceptions = ['status', 'session_persistence',
                            'status_description']
         self._check_list_with_filter(
@@ -222,7 +222,7 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
         self.assertEqual(new_name, updated_pool['name'])
         self.assertEqual('new_description', updated_pool['description'])
         self.assertEqual('LEAST_CONNECTIONS', updated_pool['lb_method'])
-        self.client.delete_pool(pool['id'])
+        self.lbv1_client.delete_pool(pool['id'])
 
     @test.idempotent_id('277a99ce-4b3e-451d-a18a-d26c0376d176')
     def test_show_vip(self):
