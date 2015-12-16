@@ -459,7 +459,6 @@ class SubnetTestJSON(base.BaseAdminNetworkTest):
         self._compare_resource_attrs(updated_subnet, kwargs)
         self._delete_network(network['id'])
 
-
     @test.attr(type='smoke')
     @decorators.skip_because(bug="1501827")
     def test_create_delete_subnet_all_attributes(self):

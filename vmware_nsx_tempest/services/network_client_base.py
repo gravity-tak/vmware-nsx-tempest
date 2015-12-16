@@ -55,3 +55,15 @@ class BaseNetworkClient(base.BaseNetworkClient):
         except lib_exc.NotFound:
             return True
         return False
+
+
+default_params = {
+    'disable_ssl_certificate_validation': True,
+    'ca_certs': None,
+    'trace_requests': ''}
+default_params_2 = {
+    'catalog_type': 'network',
+    'region': 'nova',
+    'endpoint_type': 'publicURL',
+    'build_timeout': 300,
+    'build_interval': 1}

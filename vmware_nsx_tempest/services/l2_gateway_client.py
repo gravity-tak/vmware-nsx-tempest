@@ -12,18 +12,6 @@
 
 from vmware_nsx_tempest.services import network_client_base as base
 
-default_params = {
-    'disable_ssl_certificate_validation': True,
-    'ca_certs': None,
-    'trace_requests': ''}
-
-default_params_2 = {
-    'catalog_type': 'network',
-    'region': 'nova',
-    'endpoint_type': 'publicURL',
-    'build_timeout': 300,
-    'build_interval': 1}
-
 
 class L2GatewayClient(base.BaseNetworkClient):
     resource = 'l2_gateway'
@@ -58,7 +46,7 @@ class L2GatewayClient(base.BaseNetworkClient):
 def create_l2_gateway_client(auth_provider, catalog_type, region,
                              endpoint_type, build_interval, build_timeout,
                              **kwargs):
-    params = default_params.copy()
+    params = base.default_params.copy()
     params.update(kwargs)
     l2_gateway_client = L2GatewayClient(auth_provider, catalog_type, region,
                                         endpoint_type, build_interval,

@@ -170,7 +170,7 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     @test.idempotent_id('73dfc119-b64b-4e56-90d2-df61d7181098')
     def test_create_update_delete_pool_vip(self):
         # Creates a vip
-        pool_name=data_utils.rand_name("pool-")
+        pool_name = data_utils.rand_name("pool-")
         vip_name = data_utils.rand_name('vip-')
         address = self.subnet['allocation_pools'][0]['end']
         body = self.lbv1_client.create_pool(
@@ -462,7 +462,7 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
     @test.idempotent_id('4fa308fa-ac2b-4acf-87db-adfe2ee4739c')
     def test_update_pool_related_to_member(self):
         # Create new pool
-        pool_name=data_utils.rand_name("pool-")
+        pool_name = data_utils.rand_name("pool-")
         body = self.lbv1_client.create_pool(
             pool_name,
             lb_method='ROUND_ROBIN',

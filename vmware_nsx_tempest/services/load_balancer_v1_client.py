@@ -12,11 +12,6 @@
 
 from vmware_nsx_tempest.services import network_client_base as base
 
-
-default_params = {
-    'disable_ssl_certificate_validation': True,
-    'ca_certs': None,
-    'trace_requests': ''}
 POOL_RID = 'pools'
 VIP_RID = 'vips'
 HEALTHMONITOR_RID = 'health_monitors'
@@ -59,7 +54,7 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
 
     def associate_health_monitor_with_pool(self, health_monitor_id, pool_id):
         """Create a mapping between a health monitor and a pool."""
-        post_body = {'health_monitor': { 'id': health_monitor_id }}
+        post_body = {'health_monitor': {'id': health_monitor_id}}
         req_uri = '/lb/pools/%s/%s' % (pool_id, HEALTHMONITOR_RID)
         return self.create_resource(req_uri, post_body)
 
@@ -78,7 +73,8 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
         """Delete a given health monitor."""
         return self._delete_lb(HEALTHMONITOR_RID, health_monitor_id)
 
-    def disassociate_health_monitor_with_pool(self, health_monitor_id, pool_id):
+    def disassociate_health_monitor_with_pool(self, health_monitor_id,
+                                              pool_id):
         """Remove a mapping from a health monitor to a pool."""
         req_uri = ('/lb/pools/%s/%s/%s'
                    % (pool_id, HEALTHMONITOR_RID, health_monitor_id))
@@ -219,7 +215,7 @@ def _g_resource_namelist(lb_resource):
 def create_lbv1_client(auth_provider, catalog_type, region,
                        endpoint_type, build_interval, build_timeout,
                        **kwargs):
-    params = default_params.copy()
+    params = base.default_params.copy()
     params.update(kwargs)
     lbv1_client = LoadBalancerV1Client(auth_provider, catalog_type, region,
                                        endpoint_type, build_interval,
