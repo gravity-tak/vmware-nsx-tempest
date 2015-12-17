@@ -10,6 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import time
+
+from tempest_lib import exceptions as lib_exc
+
+from tempest import exceptions
 from vmware_nsx_tempest.services import network_client_base as base
 
 POOL_RID = 'pools'
@@ -205,6 +210,34 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
         body.update(**kwargs)
         return self._update_lb(VIP_RID, vip_id, **body)
 
+    # Following 2 methods are specifically to load-balancer V1 client.
+    # They are being implemented by the pareant tempest_lib.common.rest_client
+    # with different calling signatures, only id, no resoure_type. Because,
+    # starting in Liberty release, each resource should have its own client.
+    # Since V1 is deprecated, we are not going to change it, and
+    # copy following 2 methods for V1 LB client only.
+    def wait_for_resource_deletion(self, resource_type, id, client=None):
+        """Waits for a resource to be deleted."""
+        start_time = int(time.time())
+        while True:
+            if self.is_resource_deleted(resource_type, id, client=client):
+                return
+            if int(time.time()) - start_time >= self.build_timeout:
+                raise exceptions.TimeoutException
+            time.sleep(self.build_interval)
+
+    def is_resource_deleted(self, resource_type, id, client=None):
+        if client is None:
+            client = self
+        method = 'show_' + resource_type
+        try:
+            getattr(client, method)(id)
+        except AttributeError:
+            raise Exception("Unknown resource type %s " % resource_type)
+        except lib_exc.NotFound:
+            return True
+        return False
+
 
 def _g_resource_namelist(lb_resource):
     if lb_resource[-1] == 's':
@@ -232,3 +265,18 @@ def destroy_tenant_lb(lbv1_client):
         lbv1_client.delete_vip(o['id'])
     for o in lbv1_client.list_pools():
         lbv1_client.delete_pool(o['id'])
+
+
+# For itempest user:
+# from itempest import load_our_solar_system as osn
+# from vmware_nsx_tempest.services import load_balancer_v1_client
+# lbv1 = load_balancer_v1_client.get_client(osn.adm)
+def get_client(cli_mgr):
+    manager = getattr(cli_mgr, 'manager', cli_mgr)
+    _params = manager.default_params_with_timeout_values.copy()
+    client = LoadBalancerV1Client(manager.auth_provider,
+                                  manager.networks_client.service,
+                                  manager.networks_client.region,
+                                  manager.networks_client.endpoint_type,
+                                  **_params)
+    return client

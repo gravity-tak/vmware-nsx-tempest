@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from vmware_nsx_tempest.services import network_client_base as base
+from tempest.services.network.json import base
 
 
 class L2GatewayClient(base.BaseNetworkClient):
@@ -43,12 +43,16 @@ class L2GatewayClient(base.BaseNetworkClient):
         return self.list_resources(uri, **filters)
 
 
-def create_l2_gateway_client(auth_provider, catalog_type, region,
-                             endpoint_type, build_interval, build_timeout,
-                             **kwargs):
-    params = base.default_params.copy()
-    params.update(kwargs)
-    l2_gateway_client = L2GatewayClient(auth_provider, catalog_type, region,
-                                        endpoint_type, build_interval,
-                                        build_timeout, **params)
-    return l2_gateway_client
+# For itempest user:
+# from itempest import load_our_solar_system as osn
+# from vmware_nsx_tempest.services import l2_gateway_client
+# l2gw = l2_gateway_client.get_client(osn.adm)
+def get_client(cli_mgr):
+    manager = getattr(cli_mgr, 'manager', cli_mgr)
+    _params = manager.default_params_with_timeout_values.copy()
+    client = L2GatewayClient(manager.auth_provider,
+                             manager.networks_client.service,
+                             manager.networks_client.region,
+                             manager.networks_client.endpoint_type,
+                             **_params)
+    return client

@@ -34,28 +34,6 @@ class BaseNetworkClient(base.BaseNetworkClient):
             ca_certs=ca_certs,
             trace_requests=trace_requests)
 
-    def wait_for_resource_deletion(self, resource_type, id, client=None):
-        """Waits for a resource to be deleted."""
-        start_time = int(time.time())
-        while True:
-            if self.is_resource_deleted(resource_type, id, client=client):
-                return
-            if int(time.time()) - start_time >= self.build_timeout:
-                raise exceptions.TimeoutException
-            time.sleep(self.build_interval)
-
-    def is_resource_deleted(self, resource_type, id, client=None):
-        if client is None:
-            client = self
-        method = 'show_' + resource_type
-        try:
-            getattr(client, method)(id)
-        except AttributeError:
-            raise Exception("Unknown resource type %s " % resource_type)
-        except lib_exc.NotFound:
-            return True
-        return False
-
 
 default_params = {
     'disable_ssl_certificate_validation': True,
