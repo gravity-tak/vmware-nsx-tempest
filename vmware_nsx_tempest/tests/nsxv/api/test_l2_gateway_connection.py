@@ -23,19 +23,22 @@ from tempest import config
 
 from vmware_nsx_tempest.services import base_l2gw
 from vmware_nsx_tempest.services import l2_gateway_client as L2GW
+from vmware_nsx_tempest.services import l2_gateway_connection_client as L2GWC
 
 CONF = config.CONF
 L2GW_RID = 'l2_gateway'
 L2GW_RIDs = 'l2_gateways'
+L2GWC_RID = 'l2_gateway_connection'
+L2GWC_RIDs = 'l2_gateway_connections'
 
 
-class L2GatewayTest(base.BaseAdminNetworkTest):
+class L2GatewayConnectionTest(base.BaseAdminNetworkTest):
 
     credentials = ['primary', 'admin']
 
     @classmethod
     def skip_checks(cls):
-        super(L2GatewayTest, cls).skip_checks()
+        super(L2GatewayConnectionTest, cls).skip_checks()
         if not test.is_extension_enabled('l2-gateway', 'network'):
             msg = "l2-gateway extension not enabled."
             raise cls.skipException(msg)
@@ -43,7 +46,7 @@ class L2GatewayTest(base.BaseAdminNetworkTest):
             msg = "l2-gateway-connection extension is not enabled"
             raise cls.skipException(msg)
         # if CONF attr device_on_vlan not defined, SKIP entire test suite
-        dev_profile = cls.getattr_or_skip_test("device_one_vlan")
+        cls.dev_profile = cls.getattr_or_skip_test("device_one_vlan")
 
     @classmethod
     def getattr_or_skip_test(cls, l2gw_attr_name):
@@ -55,7 +58,7 @@ class L2GatewayTest(base.BaseAdminNetworkTest):
 
     @classmethod
     def setup_clients(cls):
-        super(L2GatewayTest, cls).setup_clients()
+        super(L2GatewayConnectionTest, cls).setup_clients()
         cls.l2gw_created = {}
         l2gw_mgr = cls.os_adm
         init_params = cls.manager.default_params_with_timeout_values.copy()
@@ -64,11 +67,12 @@ class L2GatewayTest(base.BaseAdminNetworkTest):
         init_params['region'] = l2gw_mgr.networks_client.region
         init_params['endpoint_type'] = l2gw_mgr.networks_client.endpoint_type
         cls.l2gw_client = L2GW.L2GatewayClient(**init_params)
+        cls.l2gwc_client = L2GWC.L2GatewayConnectionClient(**init_params)
         cls.l2gw_list_0 = cls.l2gw_client.list_l2_gateways()[L2GW_RIDs]
 
     @classmethod
     def resource_setup(cls):
-        super(L2GatewayTest, cls).resource_setup()
+        super(L2GatewayConnectionTest, cls).resource_setup()
 
     @classmethod
     def resource_cleanup(cls):
@@ -80,6 +84,15 @@ class L2GatewayTest(base.BaseAdminNetworkTest):
             except Exception:
                 # log it please
                 pass
+
+    def _create_l2gw_device(self, _name, _devices):
+        _vlan_id_list = _devices['devices'][0]['interfaces'][0].get(
+            'segmentation_id', None)
+        _res_new = self.l2gw_client.create_l2_gateway(
+            name=_name, **_devices)[L2GW_RID]
+        self.l2gw_created[_res_new['id']] = _res_new
+        _res_show = self.l2gw_client.show_l2_gateway(_res_new['id'])[L2GW_RID]
+        return _res_show
 
     def _csuld_single_device_interface_vlan(self, _name, _devices):
         _vlan_id_list = _devices['devices'][0]['interfaces'][0].get(
@@ -96,7 +109,7 @@ class L2GatewayTest(base.BaseAdminNetworkTest):
         _res_lst = self.l2gw_client.list_l2_gateways(name=_name2)[L2GW_RIDs]
         self.l2gw_created.pop(_res_new['id'])
 
-    @test.idempotent_id('8b45a9a5-468b-4317-983d-7cceda367074')
+    @test.idempotent_id('6628c662-b997-46cd-8266-77f329bda062')
     def test_csuld_single_device_interface_vlan_type1(self):
         """This method don't have vlan in the device profile when creating l2gw"""
         dev_profile = self.getattr_or_skip_test("device_one_vlan")
@@ -104,36 +117,36 @@ class L2GatewayTest(base.BaseAdminNetworkTest):
         _devices = base_l2gw.get_l2gw_body(dev_profile)
         _vlan_id_list = _devices['devices'][0]['interfaces'][0].pop(
             'segmentation_id', None)
-        self._csuld_single_device_interface_vlan(_name, _devices)
+        _gw = self._create_l2gw_device(_name, _devices)
 
-    @test.idempotent_id('af57cf56-a169-4d88-b32e-7f49365ce407')
+    @test.idempotent_id('222104e3-1260-42c1-bdf6-536c1141387c')
     def test_csuld_single_device_interface_vlan_type2(self):
         """This method have vlan in the device profile when creating l2gw"""
         dev_profile = self.getattr_or_skip_test("device_one_vlan")
         _name = data_utils.rand_name('l2gw-1v2')
         _devices = base_l2gw.get_l2gw_body(dev_profile)
-        self._csuld_single_device_interface_vlan(_name, _devices)
+        _gw = self._create_l2gw_device(_name, _devices)
 
-    @test.idempotent_id('cb59145e-3d2b-46b7-8f7b-f30f794a4d51')
+    @test.idempotent_id('1875eca7-fde9-49ba-be21-47a8cc41f2e5')
     def test_csuld_single_device_interface_mvlan_type2(self):
         dev_profile = self.getattr_or_skip_test("device_multiple_vlans")
         _name = data_utils.rand_name('l2gw-2v1')
         _devices = base_l2gw.get_l2gw_body(dev_profile)
-        self._csuld_single_device_interface_vlan(_name, _devices)
+        _gw = self._create_l2gw_device(_name, _devices)
 
-    @test.idempotent_id('5522bdfe-ebe8-4eea-81b4-f4075bb608cf')
+    @test.idempotent_id('53755cb0-fdca-4ee7-8e43-a9b8a9d6d90a')
     def test_csuld_single_device_minterface_mvlan_type1(self):
         # NSX-v does not support multiple interfaces
         dev_profile = self.getattr_or_skip_test(
             "multiple_interfaces_multiple_vlans")
         _name = data_utils.rand_name('l2gw-m2v1')
         _devices = base_l2gw.get_l2gw_body(dev_profile)
-        self._csuld_single_device_interface_vlan(_name, _devices)
+        _gw = self._create_l2gw_device(_name, _devices)
 
-    @test.idempotent_id('5bec26e0-855f-4537-b31b-31663a820ddb')
+    @test.idempotent_id('723b0b78-35d7-4774-89c1-ec73797a1fe3')
     def test_csuld_single_device_minterface_mvlan_type2(self):
         dev_profile = self.getattr_or_skip_test(
             "multiple_interfaces_multiple_vlans")
         _name = data_utils.rand_name('l2gw-m2v2')
         _devices = base_l2gw.get_l2gw_body(dev_profile)
-        self._csuld_single_device_interface_vlan(_name, _devices)
+        _gw = self._create_l2gw_device(_name, _devices)

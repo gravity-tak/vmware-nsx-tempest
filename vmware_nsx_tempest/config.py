@@ -83,19 +83,16 @@ l2gw_group = cfg.OptGroup(name='l2gw',
                           title="l2-gateway Configuration Options")
 
 L2gwGroup = [
-    cfg.StrOpt('device_1vlan',
+    cfg.StrOpt('device_one_vlan',
                 default="",
                 help="l2g2 device with one VLAN"
-                     " required attribute is interface_names."
-                     " name=l2gw-1,interface_names=dvportgroup-14420|3845"),
-    cfg.StrOpt('device_2vlans',
+                     " l2gw-1::dvportgroup-14420|3845"),
+    cfg.StrOpt('device_multiple_vlans',
                 default="",
-                help="l2gw device with 2 VLANs"
-                     " required attribute is interface_names."
-                     " name=l2gw-2,interface_names=dvportgroup-14425|1151#1152"),
-    cfg.StrOpt('device_trunkvlan',
+                help="l2gw device with multiple VLANs"
+                     " l2gw-falcon-x::dvportgroup-14429|3880#3381#3382#3383#3384#3385"),
+    cfg.StrOpt('multiple_interfaces_multiple_vlans',
                 default="",
-                help="Trunk VLAN device, allow multiple VLANs."
-                     " required attribute is interface_names."
-                     " nname=l2gw-falcon-x,interface_names=dvportgroup-14429|3880#3381#3382#3383#3384#3385"),
+                help="l2g2 multiple devices, each interface has multiple VLANs"
+                     " l2gw-m-ifs::dvportgroup-14420|3845#3846;dvportgroup-15530|3900"),
 ]

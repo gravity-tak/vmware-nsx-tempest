@@ -27,7 +27,7 @@ INTERFACE_DELIMITER = ";"
   For single device multiple interfaces with single or multiple vlans
     l2gw_switch = device_name1::int_name1|vlan1#vlan2;int_name2|vlan3
   For multiple devices with mutiple interfaces having single or mutiple vlan
-    l2gw_switch = device_name1::int_name1|vlan1,device_name2::int_name2|vlan2
+    l2gw_switch = device_name1::int_name1|vlan1,device_name2::int_name2|vlan2#vlan3
 """
 
 
@@ -48,6 +48,17 @@ def get_interface(interfaces):
     return interface_dict
 
 
+def get_device_interface(device_name, interface):
+    if INTERFACE_DELIMITER in interface:
+        interface_dict = interface.split(INTERFACE_DELIMITER)
+        interfaces = get_interface(interface_dict)
+    else:
+        interfaces = get_interface([interface])
+    device = {'device_name': device_name,
+              'interfaces': interfaces}
+    return device
+
+ 
 def get_l2gw_body(l2gw_conf):
     device_dict = []
     devices = l2gw_conf.split(DEVICE_DELIMITER)
@@ -55,13 +66,7 @@ def get_l2gw_body(l2gw_conf):
         if DEVICE_INTERFACE_DELIMITER in device:
             device_name = device.split(DEVICE_INTERFACE_DELIMITER)[0]
             interface = device.split(DEVICE_INTERFACE_DELIMITER)[1]
-            if INTERFACE_DELIMITER in interface:
-                interface_dict = interface.split(INTERFACE_DELIMITER)
-                interfaces = get_interface(interface_dict)
-            else:
-                interfaces = get_interface([interface])
-        device = {'device_name': device_name,
-                  'interfaces': interfaces}
+            device = get_device_interface(device_name, interface)
         device_dict.append(device)
     body = {'devices': device_dict}
     return body
