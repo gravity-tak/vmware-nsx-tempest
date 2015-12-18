@@ -30,7 +30,6 @@ L2GW_RIDs = 'l2_gateways'
 
 
 class L2GatewayTest(base.BaseAdminNetworkTest):
-
     credentials = ['primary', 'admin']
 
     @classmethod
@@ -39,7 +38,8 @@ class L2GatewayTest(base.BaseAdminNetworkTest):
         if not test.is_extension_enabled('l2-gateway', 'network'):
             msg = "l2-gateway extension not enabled."
             raise cls.skipException(msg)
-        if not test.is_extension_enabled('l2-gateway-connection', 'network'):
+        if not test.is_extension_enabled('l2-gateway-connection',
+                                         'network'):
             msg = "l2-gateway-connection extension is not enabled"
             raise cls.skipException(msg)
         # if CONF attr device_on_vlan not defined, SKIP entire test suite
@@ -62,7 +62,8 @@ class L2GatewayTest(base.BaseAdminNetworkTest):
         init_params['auth_provider'] = l2gw_mgr.auth_provider
         init_params['service'] = l2gw_mgr.networks_client.service
         init_params['region'] = l2gw_mgr.networks_client.region
-        init_params['endpoint_type'] = l2gw_mgr.networks_client.endpoint_type
+        init_params[
+            'endpoint_type'] = l2gw_mgr.networks_client.endpoint_type
         cls.l2gw_client = L2GW.L2GatewayClient(**init_params)
         cls.l2gw_list_0 = cls.l2gw_client.list_l2_gateways()[L2GW_RIDs]
 
@@ -81,20 +82,39 @@ class L2GatewayTest(base.BaseAdminNetworkTest):
                 # log it please
                 pass
 
+    def _exp_eq(self, o1, o2, attr_list):
+        for attr in attr_list:
+            if attr in o1 and attr in o2:
+                self.assertEqual(o1[attr],
+                                 o2[attr],
+                                 "Filed=%s has different values: (%s, %s)" % (
+                                     o1[attr], o2[attr]))
+
     def _csuld_single_device_interface_vlan(self, _name, _devices):
         _vlan_id_list = _devices['devices'][0]['interfaces'][0].get(
             'segmentation_id', None)
         _res_new = self.l2gw_client.create_l2_gateway(
             name=_name, **_devices)[L2GW_RID]
         self.l2gw_created[_res_new['id']] = _res_new
-        _res_show = self.l2gw_client.show_l2_gateway(_res_new['id'])[L2GW_RID]
+        self.assertEqual(_name, _res_new['name'],
+                         "l2gw name=%s is not the same as requested=%s" % (
+                         _res_new['name'], _name))
+        _res_show = self.l2gw_client.show_l2_gateway(
+            _res_new['id'])[L2GW_RID]
+        self.assertTrue(0, cmp(_res_new['devices'][0]['interfaces'],
+                               _res_show['devices'][0]['interfaces']))
         _name2 = _name + "-day2"
         _res_upd = self.l2gw_client.update_l2_gateway(
             _res_new['id'], name=_name2)[L2GW_RID]
-        _res_lst = self.l2gw_client.list_l2_gateways(name=_name2)[L2GW_RIDs]
+        _res_lst = self.l2gw_client.list_l2_gateways(
+            name=_name2)[L2GW_RIDs][0]
+        self.assertEqual(_name2, _res_lst['name'],
+                         "l2gw name=%s is not the same as requested=%s" % (
+                         _res_new['name'], _name2))
         _res_del = self.l2gw_client.delete_l2_gateway(_res_new['id'])
         _res_lst = self.l2gw_client.list_l2_gateways(name=_name2)[L2GW_RIDs]
         self.l2gw_created.pop(_res_new['id'])
+        self.assertEmpty(_res_lst, "l2gw name=%s not deleted." % _name2)
 
     @test.idempotent_id('8b45a9a5-468b-4317-983d-7cceda367074')
     def test_csuld_single_device_interface_vlan_type1(self):
