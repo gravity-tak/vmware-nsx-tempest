@@ -83,6 +83,12 @@ l2gw_group = cfg.OptGroup(name='l2gw',
                           title="l2-gateway Configuration Options")
 
 L2gwGroup = [
+    cfg.DictOpt('vlan_subnet_dict',
+                default={},
+                help="Tenant's subnet cdir for accessing VLAN network."
+                     " Example: cidr=192.168.99.0/24,start:192.168.99.41"
+                     "          ,end:192.168.99.50,mask_bits:24"
+                     "          ,gateway=192.168.99.253,ip_version=4"),
     cfg.StrOpt('device_one_vlan',
                 default="",
                 help="l2g2 device with one VLAN"
