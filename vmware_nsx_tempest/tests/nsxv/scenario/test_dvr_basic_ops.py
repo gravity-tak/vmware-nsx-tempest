@@ -118,8 +118,52 @@ class TestDvrBasicOps(manager.NetworkScenarioTest):
         server = self._create_server(name, self.network, self.port_id)
         self._check_tenant_network_connectivity()
 
+        # TAK@2015-12-24 FAILed HERE
+        import pdb; pdb.set_trace()
         floating_ip = self.create_floating_ip(server)
         self.floating_ip_tuple = Floating_IP_tuple(floating_ip, server)
+
+    # overwrite super class
+    def create_networks(self, dns_nameservers=None, **kwargs):
+        client = self.network_client
+        networks_client = self.networks_client
+        subnets_client = self.subnets_client
+        network = self._create_network(
+            client=client, networks_client=networks_client,
+            tenant_id=self.tenant_id)
+
+        router_kwargs = {}
+        for k in kwargs.keys():
+            if k in ('distributed', 'router_type', 'router_size'):
+                router_kwargs[k] = kwargs.pop(k)
+        router = self._create_router(**router_kwargs)
+
+        subnet_kwargs = dict(network=network, client=client,
+                             subnets_client=subnets_client)
+        # use explicit check because empty list is a valid option
+        if dns_nameservers is not None:
+            subnet_kwargs['dns_nameservers'] = dns_nameservers
+        subnet = self._create_subnet(**subnet_kwargs)
+        subnet.add_to_router(router.id)
+        return network, subnet, router
+
+    # overwrite super class
+    def _create_router(self, client=None, tenant_id=None,
+                       namestart='router-smoke', **kwargs):
+        if not client:
+            client = self.network_client
+        if not tenant_id:
+            tenant_id = client.tenant_id
+        name = data_utils.rand_name(namestart)
+        result = client.create_router(name=name,
+                                      admin_state_up=True,
+                                      tenant_id=tenant_id,
+                                      **kwargs)
+        router = net_resources.DeletableRouter(client=client,
+                                               **result['router'])
+        self.assertEqual(router.name, name)
+        self.addCleanup(self.delete_wrapper, router.delete)
+        return router
 
     def check_networks(self):
         """
@@ -162,7 +206,8 @@ class TestDvrBasicOps(manager.NetworkScenarioTest):
         }
         if port_id is not None:
             create_kwargs['networks'][0]['port'] = port_id
-        server = self.create_server(name=name, create_kwargs=create_kwargs)
+        # manger.create_server does not use create_kwargs; open it up
+        server = self.create_server(name=name, **create_kwargs)
         self.servers.append(server)
         return server
 

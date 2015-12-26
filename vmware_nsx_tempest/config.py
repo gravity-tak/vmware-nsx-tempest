@@ -2,7 +2,6 @@ from oslo_config import cfg
 from tempest import config
 
 scenario_group = config.scenario_group
-
 ScenarioGroup = [
     cfg.FloatOpt('waitfor_disassoc',
                  default=15.0,
@@ -28,7 +27,6 @@ ScenarioGroup = [
 ]
 
 network_group = config.network_group
-
 NetworkGroup = [
     cfg.StrOpt('l2gw_switch',
                default='',
@@ -41,7 +39,6 @@ NetworkGroup = [
 
 nsxv_group = cfg.OptGroup(name='nsxv',
                           title="NSX-v Configuration Options")
-
 NSXvGroup = [
     cfg.StrOpt('manager_uri',
                default='https://10.0.0.10',
@@ -81,24 +78,22 @@ NSXvGroup = [
 
 l2gw_group = cfg.OptGroup(name='l2gw',
                           title="l2-gateway Configuration Options")
-
 L2gwGroup = [
-    cfg.DictOpt('vlan_subnet_dict',
+    cfg.DictOpt('vlan_subnet_ipv4_dict',
                 default={},
-                help="Tenant's subnet cdir for accessing VLAN network."
+                help="Tenant's VLAN subnet cdir to connect to l2gw/VXLAN."
                      " Example: cidr=192.168.99.0/24,start:192.168.99.41"
-                     "          ,end:192.168.99.50,mask_bits:24"
-                     "          ,gateway=192.168.99.253,ip_version=4"),
+                     "          ,end:192.168.99.50,gateway=192.168.99.253"),
     cfg.StrOpt('device_one_vlan',
-                default="",
-                help="l2g2 device with one VLAN"
-                     " l2gw-1::dvportgroup-14420|3845"),
+               default="",
+               help="l2g2 device with one VLAN"
+                    " l2gw-1::dvportgroup-14420|3845"),
     cfg.StrOpt('device_multiple_vlans',
-                default="",
-                help="l2gw device with multiple VLANs"
-                     " l2gw-falcon-x::dvportgroup-14429|3880#3381#3382#3383#3384#3385"),
+               default="",
+               help="l2gw device with multiple VLANs"
+                    " l2gw-x::dvportgroup-14429|3880#3381#3382"),
     cfg.StrOpt('multiple_interfaces_multiple_vlans',
-                default="",
-                help="l2g2 multiple devices, each interface has multiple VLANs"
-                     " l2gw-m-ifs::dvportgroup-14420|3845#3846;dvportgroup-15530|3900"),
+               default="",
+               help="l2gw multiple devices, interface has multiple VLANs"
+                    " m-ifs::dvportgroup-144|138#246;dvportgroup-155|339"),
 ]

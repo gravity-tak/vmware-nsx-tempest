@@ -96,7 +96,7 @@ class TestSimpleFlatNetwork(dmgr.TopoDeployScenarioManager):
             flavor=self.get_server_flavor(),
             name=self.net_network['name'])
         self.check_server_connected(self.serv1)
-        dmgr.LOG.info("deployment delete-server - simple flat network.")
+        dmgr.LOG.info("deploy delete-server - simple flat network.")
         self.servers_client.delete_server(self.serv1['id'])
         dmgr.LOG.info('deploy tc:test_simple_flat_network test-completed.')
 
@@ -134,10 +134,11 @@ class TestTenantConnectivity(dmgr.TopoDeployScenarioManager):
     @test.idempotent_id('3c6cd4fe-de25-47ef-b638-a6bbb312da09')
     @test.services('compute', 'network')
     def test_tenant_connectivity(self):
+        client_mgr = self.manager
         username, password = self.get_image_userpass()
         # create security_group with loginable rules
         self.security_group = self._create_security_group(
-            client=self.network_client, namestart='deploy-connect')
+            client=client_mgr.network_client, namestart='deploy-connect')
         self.network, self.subnet, self.router = self.setup_tenant_network(
             self.public_network_id, namestart='deploy-connect')
         self.check_networks(self.network, self.subnet, self.router)
@@ -148,7 +149,7 @@ class TestTenantConnectivity(dmgr.TopoDeployScenarioManager):
             flavor=self.get_server_flavor(),
             name=self.network['name'])
         self.fip1 = self.create_floatingip_for_server(
-            self.serv1, client=self.network_client)
+            self.serv1, client_mgr=client_mgr)
         msg = "Associate floatingip[%s] sever#1" % self.fip1
         self._check_floatingip_connectivity(
             self.fip1, self.serv1, should_connect=True, msg=msg)
@@ -176,7 +177,7 @@ class TestTenantConnectivity(dmgr.TopoDeployScenarioManager):
             server_pingable,
             msg="Expect server#2 to be reachable after floatingip assigned.")
         self.disassociate_floatingip(self.fip1)
-        dmgr.LOG.info("deployment delete-server - tenant connectivity.")
+        dmgr.LOG.info("deploy delete-server - tenant connectivity.")
         self.servers_client.delete_server(self.serv1['id'])
         self.servers_client.delete_server(self.serv2['id'])
         self.router.unset_gateway()
@@ -212,35 +213,37 @@ class TestMultiTenantsNetwork(dmgr.TopoDeployScenarioManager):
         for tn in ['green', 'red']:
             tenant = getattr(self, tn, None)
             if tenant and 'fip1' in tenant:
-                dmgr.delete_all_servers(tenant['servers_client'])
+                servers_client = tenant['client_mgr'].servers_client
+                dmgr.delete_all_servers(servers_client)
                 self.disassociate_floatingip(tenant['fip1'])
                 self.disassociate_floatingip(tenant['fip2'])
                 if from_test:
                     time.sleep(dmgr.WAITTIME_AFTER_DISASSOC_FLOATINGIP)
-                tenant['network_client'].delete_floatingip(tenant['fip1'].id)
-                tenant['network_client'].delete_floatingip(tenant['fip2'].id)
+                fip_client = tenant['client_mgr'].floating_ips_client
+                fip_client.delete_floatingip(tenant['fip1'].id)
+                fip_client.delete_floatingip(tenant['fip2'].id)
                 tenant.pop('fip1')
                 tenant['router'].delete()
                 if from_test:
                     time.sleep(dmgr.WAITTIME_AFTER_ASSOC_FLOATINGIP)
                 tenant['network'].delete()
 
-    def create_tenant_network_env(self, tenant_network_client,
-                                  t_id, servers_client,
+    def create_tenant_network_env(self, client_mgr, t_id,
                                   check_outside_world=True,
                                   cidr_offset=0):
         username, password = self.get_image_userpass()
         t_security_group = self._create_security_group(
-            client=tenant_network_client, namestart="deploy-multi-tenant")
+            client=client_mgr.network_client,
+            namestart="deploy-multi-tenant")
         t_network, t_subnet, t_router = self.setup_tenant_network(
-            self.public_network_id,
-            client=tenant_network_client,
+            self.public_network_id, client_mgr,
             namestart=("deploy-%s-tenant" % t_id),
             cidr_offset=cidr_offset)
         self.check_networks(t_network, t_subnet, t_router)
         name1 = t_network['name'] + "-A"
         name2 = t_network['name'] + "-B"
         security_groups = [{'name': t_security_group['name']}]
+        servers_client = client_mgr.servers_client
         t_serv1 = self.create_server_on_network(
             t_network, security_groups,
             image=self.get_server_image(),
@@ -253,18 +256,16 @@ class TestMultiTenantsNetwork(dmgr.TopoDeployScenarioManager):
             flavor=self.get_server_flavor(),
             servers_client=servers_client, name=name2)
         t_fip1 = self.create_floatingip_for_server(
-            t_serv1, client=tenant_network_client)
+            t_serv1, client_mgr=client_mgr)
         t_fip2 = self.create_floatingip_for_server(
-            t_serv2, client=tenant_network_client)
+            t_serv2, client_mgr=client_mgr)
         node1 = dmgr.make_node_info(t_fip1, username, password,
                                     check_outside_world)
         node2 = dmgr.make_node_info(t_fip2, username, password,
                                     check_outside_world)
         T = dict(security_group=t_security_group,
                  network=t_network, subnet=t_subnet,
-                 router=t_router,
-                 network_client=tenant_network_client,
-                 servers_client=servers_client,
+                 router=t_router, client_mgr=client_mgr,
                  serv1=t_serv1, fip1=t_fip1, node1=node1,
                  serv2=t_serv2, fip2=t_fip2, node2=node2)
         is_reachable = dmgr.check_host_is_reachable(
@@ -286,16 +287,13 @@ class TestMultiTenantsNetwork(dmgr.TopoDeployScenarioManager):
     @test.services('compute', 'network')
     def test_multi_tenants_network(self):
         self.green = self.create_tenant_network_env(
-            self.network_client, 'green',
-            self.servers_client, True)
+            self.manager, 'green', True)
         # in multiple tenant environment, ip overlay could happen
         # for the 2nd tenent give it a different ip-range to
         # make sure private-ip at tenat-1 is not the same being
         # assigned to tenant-2
         self.red = self.create_tenant_network_env(
-            self.alt_manager.network_client, 'red',
-            self.alt_manager.servers_client, False,
-            cidr_offset=3)
+            self.alt_manager, 'red', False, cidr_offset=3)
         # t1 can reach t2's public interface
         is_rechable = dmgr.check_host_is_reachable(
             self.green['node1'], self.red['node2']['dest'],
@@ -348,11 +346,13 @@ class TestProviderRouterTenantNetwork(dmgr.TopoDeployScenarioManager):
         for tn in ['yellow', 'blue']:
             tenant = getattr(self, tn, None)
             if tenant and 'fip' in tenant:
-                dmgr.delete_all_servers(tenant['servers_client'])
+                servers_client = tenant['client_mgr'].servers_client
+                dmgr.delete_all_servers(servers_client)
                 self.disassociate_floatingip(tenant['fip'])
                 if from_test:
                     time.sleep(dmgr.WAITTIME_AFTER_DISASSOC_FLOATINGIP)
-                tenant['network_client'].delete_floatingip(tenant['fip'].id)
+                fip_client = tenant['client_mgr'].floating_ips_client
+                fip_client.delete_floatingip(tenant['fip'].id)
                 tenant.pop('fip')
                 tenant['router'].delete_subnet(tenant['subnet'])
                 tenant['network'].delete()
@@ -363,18 +363,14 @@ class TestProviderRouterTenantNetwork(dmgr.TopoDeployScenarioManager):
                                   cidr_offset=0, **kwargs):
         namestart = "deploy-%s-tenant" % t_id
         name = data_utils.rand_name(namestart)
-        networks_client = (client_mgr.networks_client
-                           if client_mgr else self.networks_client)
-        subnets_client = (client_mgr.subnets_client
-                          if client_mgr else self.subnets_client)
-        servers_client = (client_mgr.servers_client
-                          if client_mgr else self.servers_client)
+        client_mgr = client_mgr or self.manager
+        servers_client = client_mgr.servers_client
         t_network, t_subnet = self.create_network_subnet(
-            networks_client, subnets_client, name=name,
+            client_mgr, name=name,
             cidr_offset=cidr_offset,)
         to_router.add_subnet(t_subnet)
         t_security_group = self._create_security_group(
-            client=self.network_client, namestart=namestart)
+            client=client_mgr.network_client, namestart=namestart)
         security_groups = [{'name': t_security_group['name']}]
         t_serv = self.create_server_on_network(
             t_network, security_groups,
@@ -383,10 +379,11 @@ class TestProviderRouterTenantNetwork(dmgr.TopoDeployScenarioManager):
             flavor=self.get_server_flavor(),
             servers_client=servers_client)
         t_fip = self.create_floatingip_for_server(
-            t_serv, client=self.floating_ips_client)
+            t_serv, client_mgr=client_mgr)
 
         return dict(network=t_network, subnet=t_subnet,
                     router=to_router,
+                    client_mgr=client_mgr,
                     secuirty_group=t_security_group,
                     serv=t_serv, fip=t_fip)
 
@@ -396,12 +393,12 @@ class TestProviderRouterTenantNetwork(dmgr.TopoDeployScenarioManager):
     def test_provider_router_tenant_network(self):
         # provider router owned by admin_client
         self.p_router = self._create_router(
-            client=self.admin_client, namestart="deploy-provider-router",
+            client_mgr=self.admin_manager, namestart="deploy-provider-router",
             distributed=self.tenant_router_attrs.get('distributed'),
             router_type=self.tenant_router_attrs.get('router_type'))
         self.p_router.set_gateway(self.public_network_id)
         self.yellow = self.create_tenant_network_env(
-            self.p_router, 'yellow', None, 0)
+            self.p_router, 'yellow', self.manager, 0)
         self.blue = self.create_tenant_network_env(
             self.p_router, 'blue', self.alt_manager, 2)
         username, password = self.get_image_userpass()
@@ -434,7 +431,7 @@ class TestTenantConnectivityWithExclusiveRouter(
 
     @classmethod
     def skip_checks(cls):
-        super(TestMultiTenantsNetworkWithDistributedRouter,
+        super(TestTenantConnectivityWithExclusiveRouter,
               cls).skip_checks()
         for ext in ['nsxv-router-type']:
             if not test.is_extension_enabled(ext, 'network'):
@@ -454,7 +451,7 @@ class TestMultiTenantsNetworkWithExclusiveRouter(
 
     @classmethod
     def skip_checks(cls):
-        super(TestMultiTenantsNetworkWithDistributedRouter,
+        super(TestMultiTenantsNetworkWithExclusiveRouter,
               cls).skip_checks()
         for ext in ['nsxv-router-type']:
             if not test.is_extension_enabled(ext, 'network'):
@@ -474,7 +471,7 @@ class TestProviderExclusiveRouterTenantNetwork(
 
     @classmethod
     def skip_checks(cls):
-        super(TestMultiTenantsNetworkWithDistributedRouter,
+        super(TestProviderExclusiveRouterTenantNetwork,
               cls).skip_checks()
         for ext in ['nsxv-router-type']:
             if not test.is_extension_enabled(ext, 'network'):

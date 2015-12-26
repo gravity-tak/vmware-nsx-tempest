@@ -64,7 +64,7 @@ class L2GatewayConnectionTest(base.BaseAdminNetworkTest):
             raise cls.skipException(msg)
         # skip test if CONF session:l2gw does not have the following opts
         cls.getattr_or_skip_test("device_one_vlan")
-        cls.getattr_or_skip_test("vlan_subnet_dict")
+        cls.getattr_or_skip_test("vlan_subnet_ipv4_dict")
 
     @classmethod
     def getattr_or_skip_test(cls, l2gw_attr_name):
@@ -93,19 +93,22 @@ class L2GatewayConnectionTest(base.BaseAdminNetworkTest):
     @classmethod
     def resource_setup(cls):
         super(L2GatewayConnectionTest, cls).resource_setup()
-        # create primary tenant network
-        _subnet = cls.getattr_or_skip_test("vlan_subnet_dict")
-        for _x in ('mask_bits', 'ip_version'):
+        # create primary tenant's VLAN network
+        _subnet = cls.getattr_or_skip_test("vlan_subnet_ipv4_dict")
+        for _x in ('mask_bits',):
             if _x in _subnet:
                 _subnet[_x] = int(_subnet[_x])
-        # fail me if cidr not presented
+        # cidr must be presented & in IPNetwork structure
         _subnet['cidr'] = netaddr.IPNetwork(_subnet['cidr'])
         _start = _subnet.pop('start', None)
         _end = _subnet.pop('end', None)
         if _start and _end:
             _subnet['allocation_pools'] = [{'start':_start, 'end':_end}]
         cls.network = cls.create_network()
-        # changed to use cidr from l2gw session
+        # baseAdminNetworkTest does not derive ip_version, mask_bits from cidr
+        _subnet['ip_version'] = 4
+        if 'mask_bits' not in _subnet:
+            _subnet['mask_bits'] = cidr.prefixlen
         cls.subnet = cls.create_subnet(cls.network, **_subnet)
 
     @classmethod
