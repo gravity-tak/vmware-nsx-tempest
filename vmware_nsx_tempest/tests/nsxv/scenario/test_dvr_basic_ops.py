@@ -118,12 +118,10 @@ class TestDvrBasicOps(manager.NetworkScenarioTest):
         server = self._create_server(name, self.network, self.port_id)
         self._check_tenant_network_connectivity()
 
-        # TAK@2015-12-24 FAILed HERE
-        import pdb; pdb.set_trace()
         floating_ip = self.create_floating_ip(server)
         self.floating_ip_tuple = Floating_IP_tuple(floating_ip, server)
 
-    # overwrite super class
+    # overwrite super class who does not accept router attributes
     def create_networks(self, dns_nameservers=None, **kwargs):
         client = self.network_client
         networks_client = self.networks_client
@@ -137,6 +135,7 @@ class TestDvrBasicOps(manager.NetworkScenarioTest):
             if k in ('distributed', 'router_type', 'router_size'):
                 router_kwargs[k] = kwargs.pop(k)
         router = self._create_router(**router_kwargs)
+        router.set_gateway(CONF.network.public_network_id)
 
         subnet_kwargs = dict(network=network, client=client,
                              subnets_client=subnets_client)
