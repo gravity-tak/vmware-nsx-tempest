@@ -93,7 +93,7 @@ class TestDvrBasicOps(manager.NetworkScenarioTest):
 
     @classmethod
     def setup_credentials(cls):
-        # Create no network resources for these tests.
+        # Ask framework to not create network resources for these tests.
         cls.set_network_resources()
         super(TestDvrBasicOps, cls).setup_credentials()
 
@@ -202,10 +202,10 @@ class TestDvrBasicOps(manager.NetworkScenarioTest):
             ],
             'key_name': keypair['name'],
             'security_groups': security_groups,
+            'wait_until': 'ACTIVE',
         }
         if port_id is not None:
             create_kwargs['networks'][0]['port'] = port_id
-        # manger.create_server does not use create_kwargs; open it up
         server = self.create_server(name=name, **create_kwargs)
         self.servers.append(server)
         return server

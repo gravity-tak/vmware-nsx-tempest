@@ -61,12 +61,7 @@ class LoadBalancerTestJSON(base.BaseNetworkTest):
         for p in _params.keys():
             if p in ['service', 'region', 'endpoint_type']:
                 _params.pop(p)
-        cls.lbv1_client = LBV1C.LoadBalancerV1Client(
-            cls.manager.auth_provider,
-            cls.manager.networks_client.service,
-            cls.manager.networks_client.region,
-            cls.manager.networks_client.endpoint_type,
-            **_params)
+        cls.lbv1_client = LBV1C.get_client(cls.manager)
         cls.network = cls.create_network()
         cls.name = cls.network['name']
         cls.subnet = cls.create_subnet(cls.network)

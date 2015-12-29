@@ -80,14 +80,8 @@ class L2GatewayConnectionTest(base.BaseAdminNetworkTest):
         cls.l2gw_created = {}
         cls.l2gwc_created = {}
         l2gw_mgr = cls.os_adm
-        init_params = cls.manager.default_params_with_timeout_values.copy()
-        init_params['auth_provider'] = l2gw_mgr.auth_provider
-        init_params['service'] = l2gw_mgr.networks_client.service
-        init_params['region'] = l2gw_mgr.networks_client.region
-        init_params[
-            'endpoint_type'] = l2gw_mgr.networks_client.endpoint_type
-        cls.l2gw_client = L2GW.L2GatewayClient(**init_params)
-        cls.l2gwc_client = L2GWC.L2GatewayConnectionClient(**init_params)
+        cls.l2gw_client = L2GW.get_client(l2gw_mgr)
+        cls.l2gwc_client = L2GWC.get_client(l2gw_mgr)
         cls.l2gw_list_0 = cls.l2gw_client.list_l2_gateways()[L2GW_RIDs]
 
     @classmethod

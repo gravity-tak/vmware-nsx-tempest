@@ -210,7 +210,7 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
         body.update(**kwargs)
         return self._update_lb(VIP_RID, vip_id, **body)
 
-    # Following 2 methods are specifically to load-balancer V1 client.
+    # Following 3 methods are specifically to load-balancer V1 client.
     # They are being implemented by the pareant tempest_lib.common.rest_client
     # with different calling signatures, only id, no resoure_type. Because,
     # starting in Liberty release, each resource should have its own client.
@@ -238,22 +238,48 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
             return True
         return False
 
+    def wait_for_resource_status(self, fetch, status, interval=None,
+                                 timeout=None):
+        """
+        @summary: Waits for a network resource to reach a status
+        @param fetch: the callable to be used to query the resource status
+        @type fecth: callable that takes no parameters and returns the resource
+        @param status: the status that the resource has to reach
+        @type status: String
+        @param interval: the number of seconds to wait between each status
+          query
+        @type interval: Integer
+        @param timeout: the maximum number of seconds to wait for the resource
+          to reach the desired status
+        @type timeout: Integer
+        """
+        if not interval:
+            interval = self.build_interval
+        if not timeout:
+            timeout = self.build_timeout
+        start_time = time.time()
+
+        while time.time() - start_time <= timeout:
+            resource = fetch()
+            if resource['status'] == status:
+                return
+            time.sleep(interval)
+
+        # At this point, the wait has timed out
+        message = 'Resource %s' % (str(resource))
+        message += ' failed to reach status %s' % status
+        message += ' (current: %s)' % resource['status']
+        message += ' within the required time %s' % timeout
+        caller = misc.find_test_caller()
+        if caller:
+            message = '(%s) %s' % (caller, message)
+        raise exceptions.TimeoutException(message)
+
 
 def _g_resource_namelist(lb_resource):
     if lb_resource[-1] == 's':
         return (lb_resource[:-1], lb_resource)
     return (lb_resource, lb_resource + "s")
-
-
-def create_lbv1_client(auth_provider, catalog_type, region,
-                       endpoint_type, build_interval, build_timeout,
-                       **kwargs):
-    params = base.default_params.copy()
-    params.update(kwargs)
-    lbv1_client = LoadBalancerV1Client(auth_provider, catalog_type, region,
-                                       endpoint_type, build_interval,
-                                       build_timeout, **params)
-    return lbv1_client
 
 
 def destroy_tenant_lb(lbv1_client):
@@ -270,13 +296,19 @@ def destroy_tenant_lb(lbv1_client):
 # For itempest user:
 # from itempest import load_our_solar_system as osn
 # from vmware_nsx_tempest.services import load_balancer_v1_client
-# lbv1 = load_balancer_v1_client.get_client(osn.adm)
-def get_client(cli_mgr):
-    manager = getattr(cli_mgr, 'manager', cli_mgr)
-    _params = manager.default_params_with_timeout_values.copy()
-    client = LoadBalancerV1Client(manager.auth_provider,
-                                  manager.networks_client.service,
-                                  manager.networks_client.region,
-                                  manager.networks_client.endpoint_type,
+# lbv1 = load_balancer_v1_client.get_client(osn.adm.manager)
+# For tempest user:
+# lbv1 = load_balancer_v1_client.get_client(cls.os_adm)
+def get_client(client_mgr):
+    manager = getattr(client_mgr, 'manager', client_mgr)
+    net_client = getattr(manager, 'networks_client')
+    try:
+        _params = manager.default_params_with_timeout_values.copy()
+    except Exception:
+        _params = {}
+    client = LoadBalancerV1Client(net_client.auth_provider,
+                                  net_client.service,
+                                  net_client.region,
+                                  net_client.endpoint_type,
                                   **_params)
     return client

@@ -46,13 +46,20 @@ class L2GatewayClient(base.BaseNetworkClient):
 # For itempest user:
 # from itempest import load_our_solar_system as osn
 # from vmware_nsx_tempest.services import l2_gateway_client
-# l2gw = l2_gateway_client.get_client(osn.adm)
-def get_client(cli_mgr):
-    manager = getattr(cli_mgr, 'manager', cli_mgr)
+# l2gw_client = l2_gateway_client.get_client(osn.adm.manager)
+# For tempest user:
+# l2gw_client = l2_gateway_client.get_client(osn.adm)
+def get_client(client_mgr):
+    manager = getattr(client_mgr, 'manager', client_mgr)
+    net_client = getattr(manager, 'networks_client')
+    try:
+        _params = manager.default_params_with_timeout_values.copy()
+    except Exception:
+        _params = {}
     _params = manager.default_params_with_timeout_values.copy()
-    client = L2GatewayClient(manager.auth_provider,
-                             manager.networks_client.service,
-                             manager.networks_client.region,
-                             manager.networks_client.endpoint_type,
+    client = L2GatewayClient(net_client.auth_provider,
+                             net_client.service,
+                             net_client.region,
+                             net_client.endpoint_type,
                              **_params)
     return client

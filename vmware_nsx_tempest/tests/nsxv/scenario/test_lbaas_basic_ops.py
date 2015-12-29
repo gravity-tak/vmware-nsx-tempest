@@ -18,13 +18,18 @@ import tempfile
 import time
 import urllib2
 
+from tempest_lib.common.utils import data_utils
+
 from tempest.common import commands
 from tempest import config
 from tempest import exceptions
 from tempest.scenario import manager
+from tempest.services.network import resources as net_resources
 from tempest import test
 
-config = config.CONF
+from vmware_nsx_tempest.services import load_balancer_v1_client as LBV1C
+
+CONF = config.CONF
 
 
 class TestLBaaSBasicOps(manager.NetworkScenarioTest):
@@ -44,7 +49,7 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
     @classmethod
     def skip_checks(cls):
         super(TestLBaaSBasicOps, cls).skip_checks()
-        cfg = config.network
+        cfg = CONF.network
         if not test.is_extension_enabled('lbaas', 'network'):
             msg = 'LBaaS Extension is not enabled'
             raise cls.skipException(msg)
@@ -54,22 +59,40 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
             raise cls.skipException(msg)
 
     @classmethod
-    def resource_setup(cls):
-        super(TestLBaaSBasicOps, cls).resource_setup()
-        cls.servers_keypairs = {}
-        cls.members = []
-        cls.floating_ips = {}
-        cls.server_ips = {}
-        cls.port1 = 80
-        cls.port2 = 88
-        cls.num = 50
+    def setup_credentials(cls):
+        # Ask framework to not create network resources for these tests.
+        cls.set_network_resources()
+        super(TestLBaaSBasicOps, cls).setup_credentials()
 
     def setUp(self):
         super(TestLBaaSBasicOps, self).setUp()
+        self.servers_keypairs = {}
+        self.members = []
+        self.floating_ips = {}
+        self.server_ips = {}
+        self.port1 = 80
+        self.port2 = 88
+        self.num = 50
         self.server_ips = {}
         self.server_fixed_ips = {}
+        self.lbv1_client = LBV1C.get_client(self.manager)
         self._create_security_group_for_test()
         self._set_net_and_subnet()
+
+    def tearDown(self):
+        for s_id in self.server_ips.keys():
+            try:
+                self.servers_client.delete_server(s_id)
+            except Exception:
+                pass
+        try:
+            for mem in self.members:
+                mem.delete()
+            self.vip.delete()
+            self.pool.delete()
+        except Exception:
+            pass
+        super(TestLBaaSBasicOps, self).tearDown()
 
     def _set_net_and_subnet(self):
         """
@@ -81,6 +104,50 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         self.network, self.subnet, self.router = \
             self.create_networks(router_type='exclusive')
         self.check_networks()
+
+    # overwrite super class who does not accept router attributes
+    def create_networks(self, dns_nameservers=None, **kwargs):
+        client = self.network_client
+        networks_client = self.networks_client
+        subnets_client = self.subnets_client
+
+        router_kwargs = {}
+        for k in kwargs.keys():
+            if k in ('distributed', 'router_type', 'router_size'):
+                router_kwargs[k] = kwargs.pop(k)
+        router = self._create_router(**router_kwargs)
+        router.set_gateway(CONF.network.public_network_id)
+
+        network = self._create_network(
+            client=client, networks_client=networks_client,
+            tenant_id=self.tenant_id)
+
+        subnet_kwargs = dict(network=network, client=client,
+                             subnets_client=subnets_client)
+        # use explicit check because empty list is a valid option
+        if dns_nameservers is not None:
+            subnet_kwargs['dns_nameservers'] = dns_nameservers
+        subnet = self._create_subnet(**subnet_kwargs)
+        subnet.add_to_router(router.id)
+        return network, subnet, router
+
+    # overwrite super class
+    def _create_router(self, client=None, tenant_id=None,
+                       namestart='router-smoke', **kwargs):
+        if not client:
+            client = self.network_client
+        if not tenant_id:
+            tenant_id = client.tenant_id
+        name = data_utils.rand_name(namestart)
+        result = client.create_router(name=name,
+                                      admin_state_up=True,
+                                      tenant_id=tenant_id,
+                                      **kwargs)
+        router = net_resources.DeletableRouter(client=client,
+                                               **result['router'])
+        self.assertEqual(router.name, name)
+        self.addCleanup(self.delete_wrapper, router.delete)
+        return router
 
     def check_networks(self):
         """
@@ -137,13 +204,14 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
             ],
             'key_name': keypair['name'],
             'security_groups': security_groups,
+            'wait_until': 'ACTIVE',
         }
         net_name = self.network['name']
-        server = self.create_server(name=name, create_kwargs=create_kwargs)
+        server = self.create_server(name=name, **create_kwargs)
         self.servers_keypairs[server['id']] = keypair
-        if (config.network.public_network_id and not
-                config.network.tenant_networks_reachable):
-            public_network_id = config.network.public_network_id
+        if (CONF.network.public_network_id and not
+                CONF.network.tenant_networks_reachable):
+            public_network_id = CONF.network.public_network_id
             floating_ip = self.create_floating_ip(
                 server, public_network_id)
             self.floating_ips[floating_ip] = server
@@ -170,8 +238,9 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         """
         for server_id, ip in self.server_ips.iteritems():
             private_key = self.servers_keypairs[server_id]['private_key']
-            server_name = self.servers_client.get_server(server_id)['name']
-            username = config.scenario.ssh_user
+            server = self.servers_client.show_server(server_id)['server']
+            server_name = server['name']
+            username = CONF.scenario.ssh_user
             ssh_client = self.get_remote_client(
                 server_or_ip=ip,
                 private_key=private_key)
@@ -225,7 +294,7 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
                 return False
             except urllib2.HTTPError:
                 return False
-        timeout = config.compute.ping_timeout
+        timeout = CONF.compute.ping_timeout
         start = time.time()
         while not try_connect(check_ip, port):
             if (time.time() - start) > timeout:
@@ -234,11 +303,29 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
 
     def _create_pool(self):
         """Create a pool with ROUND_ROBIN algorithm."""
-        self.pool = super(TestLBaaSBasicOps, self)._create_pool(
+        pool_name = data_utils.rand_name('pool-')
+        pool = self.lbv1_client.create_pool(
+            pool_name,
             lb_method='ROUND_ROBIN',
             protocol='HTTP',
-            subnet_id=self.subnet.id)
+            subnet_id=self.subnet.id)['pool']
+        self.pool = net_resources.DeletablePool(client=self.lbv1_client,
+                                                **pool)
         self.assertTrue(self.pool)
+        return self.pool
+
+    def _create_vip(self, pool_id, **kwargs):
+        result = self.lbv1_client.create_vip(pool_id, **kwargs)
+        vip = net_resources.DeletableVip(client=self.lbv1_client,
+                                         **result['vip'])
+        return vip
+ 
+    def _create_member(self, protocol_port, pool_id, ip_version=4, **kwargs):
+        result = self.lbv1_client.create_member(protocol_port, pool_id,
+                                                ip_version, **kwargs)
+        member = net_resources.DeletableMember(client=self.lbv1_client,
+                                               **result['member'])
+        return member
 
     def _create_members(self):
         """
@@ -265,7 +352,7 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         self.assertTrue(self.members)
 
     def _assign_floating_ip_to_vip(self, vip):
-        public_network_id = config.network.public_network_id
+        public_network_id = CONF.network.public_network_id
         port_id = vip.port_id
         floating_ip = self.create_floating_ip(vip, public_network_id,
                                               port_id=port_id)
@@ -282,8 +369,8 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
                                     subnet_id=self.subnet.id,
                                     pool_id=self.pool.id)
         self.vip.wait_for_status('ACTIVE')
-        if (config.network.public_network_id and not
-                config.network.tenant_networks_reachable):
+        if (CONF.network.public_network_id and not
+                CONF.network.tenant_networks_reachable):
             self._assign_floating_ip_to_vip(self.vip)
             self.vip_ip = self.floating_ips[
                 self.vip.id][0]['floating_ip_address']
@@ -294,7 +381,7 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         # vip port - see https://bugs.launchpad.net/neutron/+bug/1163569
         # However the linuxbridge-agent does, and it is necessary to add a
         # security group with a rule that allows tcp port 80 to the vip port.
-        self.network_client.update_port(
+        self.ports_client.update_port(
             self.vip.port_id, security_groups=[self.security_group.id])
 
     def _check_load_balancing(self):
