@@ -150,7 +150,7 @@ class ExcRouterTest(base.BaseRouterTest):
     @test.attr(type='nsxv')
     @test.idempotent_id('da00c74f-81e6-4ef9-8aca-8e0345b376e9')
     def test_create_update_delete_large_router(self):
-        self._test_create_update_delete_router_with_size('large')
+        self._test_create_update_delete_router_with_size('large', 20.0)
 
     @test.attr(type='nsxv')
     @test.idempotent_id('091dad07-6044-4ca3-b16c-54a3ef92254b')

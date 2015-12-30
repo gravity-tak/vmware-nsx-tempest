@@ -1,6 +1,3 @@
-# Copyright 2015 VMware Inc
-# All Rights Reserved
-#
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -16,17 +13,19 @@
 import base64
 import json
 
-import requests
 from oslo_log import log as logging
+import requests
 
 import vmware_nsx_tempest.services.utils as utils
 
+requests.packages.urllib3.disable_warnings()
 LOG = logging.getLogger(__name__)
 
 
 class VSMClient(object):
-    """
-    This is NSX-v client which provides the API operations on its components.
+    """NSX-v client.
+
+    The client provides the API operations on its components.
     The purpose of this rest client is to query backend components after
     issuing corresponding API calls from OpenStack. This is to make sure
     the API calls has been realized on the NSX-v backend.
@@ -99,36 +98,28 @@ class VSMClient(object):
         self.headers = headers
 
     def get(self, endpoint=None, params=None):
-        """
-        Basic query GET method for json API request
-        """
+        """Basic query GET method for json API request."""
         self.__set_url(endpoint=endpoint)
         response = requests.get(self.url, headers=self.headers,
                                 verify=self.verify, params=params)
         return response
 
     def delete(self, endpoint=None, params=None):
-        """
-        Basic delete API method on endpoint
-        """
+        """Basic delete API method on endpoint."""
         self.__set_url(endpoint=endpoint)
         response = requests.delete(self.url, headers=self.headers,
                                    verify=self.verify, params=params)
         return response
 
     def post(self, endpoint=None, body=None):
-        """
-        Basic post API method on endpoint
-        """
+        """Basic post API method on endpoint."""
         self.__set_url(endpoint=endpoint)
         response = requests.post(self.url, headers=self.headers,
                                  verify=self.verify, data=json.dumps(body))
         return response
 
     def get_vdn_scope_id(self):
-        """
-        Retrieve existing network scope id
-        """
+        """Retrieve existing network scope id."""
         self.__set_api_version('2.0')
         self.__set_endpoint("/vdn/scopes")
         response = self.get()
@@ -145,8 +136,8 @@ class VSMClient(object):
         paging_info = response.json()['dataPage']['pagingInfo']
         page_size = int(paging_info['pageSize'])
         total_count = int(paging_info['totalCount'])
-        msg = "There are total %s logical switches and page size is %s" % \
-            (total_count, page_size)
+        msg = ("There are total %s logical switches and page size is %s"
+               % (total_count, page_size))
         LOG.info(msg)
         pages = utils.ceil(total_count, page_size)
         LOG.info("Total pages: %s" % pages)
@@ -158,9 +149,9 @@ class VSMClient(object):
         return lswitches
 
     def get_logical_switch(self, name):
-        """
-        Get the logical switch based on the name, which is the
-        uuid of the OpenStack L2 network. Return ls if found,
+        """Get the logical switch based on the name.
+
+        The uuid of the OpenStack L2 network. Return ls if found,
         otherwise return None.
         """
         lswitches = self.get_all_logical_switches()
@@ -174,9 +165,10 @@ class VSMClient(object):
         return ls
 
     def delete_logical_switch(self, name):
-        """
-        Delete logical switch based on name. The name of the logical
-        switch on NSX-v is the uuid of the openstack l2 network.
+        """Delete logical switch based on name.
+
+        The name of the logical switch on NSX-v is the uuid
+        of the openstack l2 network.
         """
         ls = self.get_logical_switch(name)
         if ls is not None:
@@ -189,9 +181,7 @@ class VSMClient(object):
                           (name, response.status_code))
 
     def get_all_edges(self):
-        """
-        Get all edges on NSX-v backend
-        """
+        """Get all edges on NSX-v backend."""
         self.__set_api_version('4.0')
         self.__set_endpoint('/edges')
         edges = []
@@ -211,8 +201,8 @@ class VSMClient(object):
         return edges
 
     def get_edge(self, name):
-        """
-        Get edge based on the name, which is OpenStack router.
+        """Get edge based on the name, which is OpenStack router.
+
         Return edge if found, else return None.
         """
         edges = self.get_all_edges()
@@ -226,9 +216,9 @@ class VSMClient(object):
         return edge
 
     def get_vsm_version(self):
-        """
-        Get the VSM client version including major, minor, patch
-        and build number, e.g. 6.2.0.2986609
+        """Get the VSM client version including major, minor, patch, & build#.
+
+        Build number, e.g. 6.2.0.2986609
         return: vsm version
         """
         self.__set_api_version('1.0')

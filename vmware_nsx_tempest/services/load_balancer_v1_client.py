@@ -12,6 +12,7 @@
 
 import time
 
+from tempest_lib.common.utils import misc as misc_utils
 from tempest_lib import exceptions as lib_exc
 
 from tempest import exceptions
@@ -240,7 +241,8 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
 
     def wait_for_resource_status(self, fetch, status, interval=None,
                                  timeout=None):
-        """
+        """This has different calling signature then rest_client.
+
         @summary: Waits for a network resource to reach a status
         @param fetch: the callable to be used to query the resource status
         @type fecth: callable that takes no parameters and returns the resource
@@ -270,7 +272,7 @@ class LoadBalancerV1Client(base.BaseNetworkClient):
         message += ' failed to reach status %s' % status
         message += ' (current: %s)' % resource['status']
         message += ' within the required time %s' % timeout
-        caller = misc.find_test_caller()
+        caller = misc_utils.find_test_caller()
         if caller:
             message = '(%s) %s' % (caller, message)
         raise exceptions.TimeoutException(message)

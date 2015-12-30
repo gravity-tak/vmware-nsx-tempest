@@ -12,6 +12,7 @@
 
 from tempest.services.network.json import base
 
+
 class L2GatewayConnectionClient(base.BaseNetworkClient):
     resource = 'l2_gateway_connection'
     resource_plural = 'l2_gateway_connections'

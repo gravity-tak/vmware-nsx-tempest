@@ -34,8 +34,7 @@ CONF = config.CONF
 
 class TestLBaaSBasicOps(manager.NetworkScenarioTest):
 
-    """
-    This test checks basic load balancing.
+    """This test checks basic load balancing.
 
     The following is the scenario outline:
     1. Create an instance
@@ -95,14 +94,15 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         super(TestLBaaSBasicOps, self).tearDown()
 
     def _set_net_and_subnet(self):
-        """
+        """Create network, subnet and router.
+
         Query and set appropriate network and subnet attributes to be used
         for the test.  Existing tenant networks are used if they are found.
         The configured private network and associated subnet is used as a
         fallback in absence of tenant networking.
         """
-        self.network, self.subnet, self.router = \
-            self.create_networks(router_type='exclusive')
+        self.network, self.subnet, self.router = (
+            self.create_networks(router_type='exclusive'))
         self.check_networks()
 
     # overwrite super class who does not accept router attributes
@@ -150,8 +150,8 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         return router
 
     def check_networks(self):
-        """
-        Checks that we see the newly created network/subnet/router via
+        """Checks that we see the newly created network/subnet/router.
+
         checking the result of list_[networks,routers,subnets]
         """
 
@@ -208,21 +208,23 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         }
         net_name = self.network['name']
         server = self.create_server(name=name, **create_kwargs)
-        self.servers_keypairs[server['id']] = keypair
+        serv_id = server['id']
+        self.servers_keypairs[serv_id] = keypair
         if (CONF.network.public_network_id and not
                 CONF.network.tenant_networks_reachable):
             public_network_id = CONF.network.public_network_id
             floating_ip = self.create_floating_ip(
                 server, public_network_id)
             self.floating_ips[floating_ip] = server
-            self.server_ips[server['id']] = floating_ip.floating_ip_address
+            self.server_ips[serv_id] = floating_ip.floating_ip_address
         else:
-            self.server_ips[server['id']] =\
-                server['addresses'][net_name][0]['addr']
-        self.server_fixed_ips[server['id']] =\
-            server['addresses'][net_name][0]['addr']
+            self.server_ips[serv_id] = self._server_ip(server, net_name)
+        self.server_fixed_ips[serv_id] = self._server_ip(server, net_name)
         self.assertTrue(self.servers_keypairs)
         return server
+
+    def _server_ip(self, server, net_name):
+        return server['addresses'][net_name][0]['addr']
 
     def _create_servers(self):
         for count in range(2):
@@ -230,15 +232,14 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         self.assertEqual(len(self.servers_keypairs), 2)
 
     def _start_servers(self):
-        """
-        Start two backends
+        """Start two hardcoded named servers: server1 & server2
 
         1. SSH to the instance
         2. Start two http backends listening on ports 80 and 88 respectively
         """
         for server_id, ip in self.server_ips.iteritems():
             private_key = self.servers_keypairs[server_id]['private_key']
-            server = self.servers_client.show_server(server_id)['server']
+            # server = self.servers_client.show_server(server_id)['server']
             # server['name'] is not 'server1' as 2015-12 due to upstream change
             # server_name = server['name']
             username = CONF.validation.image_ssh_user
@@ -320,7 +321,7 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         vip = net_resources.DeletableVip(client=self.lbv1_client,
                                          **result['vip'])
         return vip
- 
+
     def _create_member(self, protocol_port, pool_id, ip_version=4, **kwargs):
         result = self.lbv1_client.create_member(protocol_port, pool_id,
                                                 ip_version, **kwargs)
@@ -329,8 +330,7 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         return member
 
     def _create_members(self):
-        """
-        Create two members.
+        """Create two members.
 
         In case there is only one server, create both members with the same ip
         but with different ports to listen on.
@@ -386,7 +386,8 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
             self.vip.port_id, security_groups=[self.security_group.id])
 
     def _check_load_balancing(self):
-        """
+        """http to load balancer to check message handled by both servers.
+
         1. Send NUM requests on the floating ip associated with the VIP
         2. Check that the requests are shared between the two servers
         """
