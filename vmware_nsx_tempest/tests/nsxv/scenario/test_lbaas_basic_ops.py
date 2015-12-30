@@ -239,8 +239,9 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
         for server_id, ip in self.server_ips.iteritems():
             private_key = self.servers_keypairs[server_id]['private_key']
             server = self.servers_client.show_server(server_id)['server']
-            server_name = server['name']
-            username = CONF.scenario.ssh_user
+            # server['name'] is not 'server1' as 2015-12 due to upstream change
+            # server_name = server['name']
+            username = CONF.validation.image_ssh_user
             ssh_client = self.get_remote_client(
                 server_or_ip=ip,
                 private_key=private_key)
@@ -251,7 +252,7 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
                     'charset=UTF-8\r\n\r\n%s"; cat >/dev/null')
 
             with tempfile.NamedTemporaryFile() as script:
-                script.write(resp % server_name)
+                script.write(resp % 'server1')
                 script.flush()
                 with tempfile.NamedTemporaryFile() as key:
                     key.write(private_key)
@@ -267,7 +268,7 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
                             'done > /dev/null &')
             cmd = start_server % {'port': self.port1,
                                   'script': 'script1'}
-            ssh_client.exec_command(cmd)
+            ssh_client.exec_command(cmd, False)
 
             if len(self.server_ips) == 1:
                 with tempfile.NamedTemporaryFile() as script:
@@ -281,7 +282,7 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
                                                    username, key.name)
                 cmd = start_server % {'port': self.port2,
                                       'script': 'script2'}
-                ssh_client.exec_command(cmd)
+                ssh_client.exec_command(cmd, False)
 
     def _check_connection(self, check_ip, port=80):
         def try_connect(ip, port):
@@ -294,7 +295,7 @@ class TestLBaaSBasicOps(manager.NetworkScenarioTest):
                 return False
             except urllib2.HTTPError:
                 return False
-        timeout = CONF.compute.ping_timeout
+        timeout = CONF.validation.ping_timeout
         start = time.time()
         while not try_connect(check_ip, port):
             if (time.time() - start) > timeout:

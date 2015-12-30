@@ -440,8 +440,8 @@ class TopoDeployScenarioManager(manager.NetworkScenarioTest):
         self.check_floating_ip_status(floating_ip, floatingip_status)
 
     def get_image_userpass(self):
-        return (CONF.compute.image_ssh_user,
-                CONF.compute.image_ssh_password)
+        return (CONF.validation.image_ssh_user,
+                CONF.validation.image_ssh_password)
 
     def get_server_image(self):
         return CONF.compute.image_ref

@@ -214,7 +214,7 @@ class TestDvrBasicOps(manager.NetworkScenarioTest):
         return self.keypairs[server['key_name']]['private_key']
 
     def _check_tenant_network_connectivity(self):
-        ssh_login = CONF.compute.image_ssh_user
+        ssh_login = CONF.validation.image_ssh_user
         for server in self.servers:
             # call the common method in the parent class
             super(TestDvrBasicOps, self).\
@@ -236,7 +236,7 @@ class TestDvrBasicOps(manager.NetworkScenarioTest):
         :param should_check_floating_ip_status: bool. should status of
         floating_ip be checked or not
         """
-        ssh_login = CONF.compute.image_ssh_user
+        ssh_login = CONF.validation.image_ssh_user
         floating_ip, server = self.floating_ip_tuple
         ip_address = floating_ip.floating_ip_address
         private_key = None
