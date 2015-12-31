@@ -56,7 +56,6 @@ def get_client(client_mgr):
         _params = manager.default_params_with_timeout_values.copy()
     except Exception:
         _params = {}
-    _params = manager.default_params_with_timeout_values.copy()
     client = L2GatewayClient(net_client.auth_provider,
                              net_client.service,
                              net_client.region,
