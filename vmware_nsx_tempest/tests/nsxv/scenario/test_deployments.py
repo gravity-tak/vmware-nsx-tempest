@@ -138,6 +138,7 @@ class TestTenantConnectivity(dmgr.TopoDeployScenarioManager):
         username, password = self.get_image_userpass()
         # create security_group with loginable rules
         self.security_group = self._create_security_group(
+            security_groups_client=client_mgr.security_groups_client,
             client=client_mgr.network_client, namestart='deploy-connect')
         self.network, self.subnet, self.router = self.setup_tenant_network(
             self.public_network_id, namestart='deploy-connect')
@@ -234,6 +235,7 @@ class TestMultiTenantsNetwork(dmgr.TopoDeployScenarioManager):
         username, password = self.get_image_userpass()
         t_security_group = self._create_security_group(
             client=client_mgr.network_client,
+            security_groups_client=client_mgr.security_groups_client,
             namestart="deploy-multi-tenant")
         t_network, t_subnet, t_router = self.setup_tenant_network(
             self.public_network_id, client_mgr,
@@ -370,6 +372,7 @@ class TestProviderRouterTenantNetwork(dmgr.TopoDeployScenarioManager):
             cidr_offset=cidr_offset,)
         to_router.add_subnet(t_subnet)
         t_security_group = self._create_security_group(
+            security_groups_client=client_mgr.security_groups_client,
             client=client_mgr.network_client, namestart=namestart)
         security_groups = [{'name': t_security_group['name']}]
         t_serv = self.create_server_on_network(
